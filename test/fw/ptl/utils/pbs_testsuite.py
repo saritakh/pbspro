@@ -181,6 +181,21 @@ def skipOnCray(function):
     return wrapper
 
 
+def skipOnCpuSet(function):
+    """
+    Decorator to skip a test on a CpuSet system
+    """
+
+    def wrapper(self, *args, **kwargs):
+        if self.mom.is_cpuset_mom():
+            self.skipTest(reason='capability not supported on Cpuset')
+        else:
+            function(self, *args, **kwargs)
+    wrapper.__doc__ = function.__doc__
+    wrapper.__name__ = function.__name__
+    return wrapper
+
+
 class PBSServiceInstanceWrapper(dict):
 
     """
@@ -353,6 +368,7 @@ class PBSTestSuite(unittest.TestCase):
     :param test-users: colon-separated list of users to use as test users.
                        The users specified override the default users in the
                        order in which they appear in the ``PBS_USERS`` list.
+    :param default-testcase-timeout: Default test case timeout value.
     :param data-users: colon-separated list of data users.
     :param oper-users: colon-separated list of operator users.
     :param mgr-users: colon-separated list of manager users.
@@ -526,6 +542,14 @@ class PBSTestSuite(unittest.TestCase):
         cls._validate_param('del-vnodes')
         cls._validate_param('revert-queues')
         cls._validate_param('revert-resources')
+        if 'momstype' in cls.conf:
+            _ms = cls.conf['momstype'].split(':')
+            cls.conf['momstype'] = {}
+            for _m in _ms:
+                k, v = _m.split('@')
+                cls.conf['momstype'][k] = v
+                if '.' in k:
+                    cls.conf['momstype'][k.split('.')[0]] = v
 
     @classmethod
     def is_server_licensed(cls, server):
@@ -871,7 +895,17 @@ class PBSTestSuite(unittest.TestCase):
         Revert the values set for mom
         """
         # below call is a Noop if no switching is needed
-        mom.switch_to_standard_mom()
+        if (('momstype' in self.conf.keys()) and
+                (mom.shortname in self.conf['momstype']) and
+                (self.conf['momstype'][mom.shortname] == 'cpuset')):
+            momtype = 'cpuset'
+            rv = mom.switch_to_cpuset_mom()
+        else:
+            momtype = 'standard'
+            rv = mom.switch_to_standard_mom()
+        _msg = 'Failed to switch to pbs_mom'
+        _msg += '.%s to pbs_mom' % (momtype)
+        self.assertTrue(rv, _msg)
         rv = mom.isUp()
         if not rv:
             self.logger.error('mom ' + mom.hostname + ' is down')
@@ -895,12 +929,10 @@ class PBSTestSuite(unittest.TestCase):
                 except:
                     pass
                 mom.delete_vnode_defs()
+                mom.delete_vnodes()
                 mom.restart()
                 self.logger.info('server: no nodes defined, creating one')
                 self.server.manager(MGR_CMD_CREATE, NODE, None, mom.shortname)
-                a = {'resources_available.ncpus': 8}
-                self.server.manager(MGR_CMD_SET, NODE, a, mom.shortname,
-                                    expect=True)
         name = mom.shortname
         try:
             self.server.status(NODE, id=name)
