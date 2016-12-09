@@ -134,7 +134,7 @@ SMOKE = 'smoke'
 REGRESSION = 'regression'
 NUMNODES = 'numnodes'
 TIMEOUT_KEY = '__testcase_timeout__'
-DEFAULT_TC_TIMEOUT = 180
+DEFAULT_TC_TIMEOUT = 720
 
 
 def timeout(val):
@@ -542,14 +542,6 @@ class PBSTestSuite(unittest.TestCase):
         cls._validate_param('del-vnodes')
         cls._validate_param('revert-queues')
         cls._validate_param('revert-resources')
-        if 'momstype' in cls.conf:
-            _ms = cls.conf['momstype'].split(':')
-            cls.conf['momstype'] = {}
-            for _m in _ms:
-                k, v = _m.split('@')
-                cls.conf['momstype'][k] = v
-                if '.' in k:
-                    cls.conf['momstype'][k.split('.')[0]] = v
 
     @classmethod
     def is_server_licensed(cls, server):
@@ -894,18 +886,6 @@ class PBSTestSuite(unittest.TestCase):
         """
         Revert the values set for mom
         """
-        # below call is a Noop if no switching is needed
-        if (('momstype' in self.conf.keys()) and
-                (mom.shortname in self.conf['momstype']) and
-                (self.conf['momstype'][mom.shortname] == 'cpuset')):
-            momtype = 'cpuset'
-            rv = mom.switch_to_cpuset_mom()
-        else:
-            momtype = 'standard'
-            rv = mom.switch_to_standard_mom()
-        _msg = 'Failed to switch to pbs_mom'
-        _msg += '.%s to pbs_mom' % (momtype)
-        self.assertTrue(rv, _msg)
         rv = mom.isUp()
         if not rv:
             self.logger.error('mom ' + mom.hostname + ' is down')

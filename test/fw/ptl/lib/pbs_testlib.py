@@ -12544,7 +12544,7 @@ class MoM(PBSService):
         self.configd = os.path.join(self.pbs_conf['PBS_HOME'], 'mom_priv',
                                     'config.d')
         self.config = {}
-        self.dflt_config = {'$clienthost': self.hostname}
+        self.dflt_config = {'$clienthost': self.server.hostname}
         self.version = None
         self._is_cpuset_mom = None
 
