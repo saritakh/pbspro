@@ -134,7 +134,6 @@ SMOKE = 'smoke'
 REGRESSION = 'regression'
 NUMNODES = 'numnodes'
 TIMEOUT_KEY = '__testcase_timeout__'
-DEFAULT_TC_TIMEOUT = 720
 
 
 def timeout(val):
@@ -542,6 +541,10 @@ class PBSTestSuite(unittest.TestCase):
         cls._validate_param('del-vnodes')
         cls._validate_param('revert-queues')
         cls._validate_param('revert-resources')
+        if 'default-testcase-timeout' not in cls.conf.keys():
+            cls.conf['default_testcase_timeout'] = 180
+        else:
+            cls.conf['default_testcase_timeout'] = int(cls.conf['default-testcase-timeout'])
 
     @classmethod
     def is_server_licensed(cls, server):
