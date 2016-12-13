@@ -544,7 +544,8 @@ class PBSTestSuite(unittest.TestCase):
         if 'default-testcase-timeout' not in cls.conf.keys():
             cls.conf['default_testcase_timeout'] = 180
         else:
-            cls.conf['default_testcase_timeout'] = int(cls.conf['default-testcase-timeout'])
+            cls.conf['default_testcase_timeout'] = int(
+                cls.conf['default-testcase-timeout'])
 
     @classmethod
     def is_server_licensed(cls, server):

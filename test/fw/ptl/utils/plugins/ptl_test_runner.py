@@ -550,9 +550,10 @@ class PTLTestRunner(Plugin):
             return getattr(method, TIMEOUT_KEY)
         except:
             if hasattr(test, 'test'):
-                return getattr(test.test, 'conf')['default_testcase_timeout']
+                __conf = getattr(test.test, 'conf')
             else:
-                return getattr(test.context, 'conf')['default_testcase_timeout']
+                __conf = getattr(test.context, 'conf')
+            return __conf['default_testcase_timeout']
 
     def __set_test_end_data(self, test, err=None):
         if not hasattr(test, 'start_time'):
