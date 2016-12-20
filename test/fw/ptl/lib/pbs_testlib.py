@@ -5918,6 +5918,8 @@ class Server(PBSService):
                 pcmd += ['-s', self.hostname]
                 if obj_type in (NODE, VNODE):
                     pcmd += ['-v']
+                if obj_type == HOST:
+                    pcmd += ['-H']
                 if id:
                     pcmd += [id]
                 else:
@@ -12660,10 +12662,10 @@ class MoM(PBSService):
         rav = ATTR_rescavail + '.vnode'
         a = {rah: self.hostname, rav: None}
         try:
-            _vs = self.server.status(VNODE, a, id=self.hostname)
+            _vs = self.server.status(HOST, a, id=self.hostname)
         except PbsStatusError:
             try:
-                _vs = self.server.status(VNODE, a, id=self.shortname)
+                _vs = self.server.status(HOST, a, id=self.shortname)
             except PbsStatusError as e:
                 if e.msg[0].endswith('Server has no node list'):
                     _vs = []
