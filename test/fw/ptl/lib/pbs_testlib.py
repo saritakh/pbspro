@@ -14044,8 +14044,6 @@ class PBSInitServices(object):
         self.logger.info(msg)
         ret = self.du.run_cmd(hostname, init_cmd, sudo=True, as_script=_as,
                               logerr=False)
-        if daemon is not None and daemon != 'all' and fn is not None:
-            self.du.rm(hostname, path=fn, force=True, sudo=True)
         if ret['rc'] != 0:
             raise PbsInitServicesError(rc=ret['rc'], rv=False,
                                        msg='\n'.join(ret['err']))
