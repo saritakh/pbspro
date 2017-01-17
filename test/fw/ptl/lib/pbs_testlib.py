@@ -5374,7 +5374,7 @@ class Server(PBSService):
         else:
             raise PbsServiceError(rv=False, rc=1, msg=rv)
 
-    def stop(self, sig='-TERM'):
+    def stop(self, sig=None):
         """
         Stop the PBS server
 
@@ -10721,7 +10721,7 @@ class Scheduler(PBSService):
                 raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
             return True
 
-    def stop(self, sig='-TERM'):
+    def stop(self, sig=None):
         """
         Stop the PBS scheduler
 
@@ -12592,7 +12592,7 @@ class MoM(PBSService):
                 raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
             return True
 
-    def stop(self, sig='-TERM'):
+    def stop(self, sig=None):
         """
         Stop the PBS mom
 
