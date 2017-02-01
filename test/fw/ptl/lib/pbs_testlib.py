@@ -4906,10 +4906,10 @@ class Comm(PBSService):
                                             launcher=launcher)
         else:
             try:
-                self.pi.start_comm()
+                rv = self.pi.start_comm()
             except PbsInitServicesError as e:
                 raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
-            return True
+            return rv
 
     def stop(self, sig=None):
         """
@@ -5365,14 +5365,13 @@ class Server(PBSService):
                                             launcher=launcher)
         else:
             try:
-                self.pi.start_server()
+                rv = self.pi.start_server()
             except PbsInitServicesError as e:
                 raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
-            rv = True
         if self.isUp():
             return rv
         else:
-            raise PbsServiceError(rv=False, rc=1, msg=rv)
+            raise PbsServiceError(rv=False, rc=1, msg=rv['err'])
 
     def stop(self, sig=None):
         """
@@ -10716,10 +10715,10 @@ class Scheduler(PBSService):
                                                  launcher=launcher)
         else:
             try:
-                self.pi.start_sched()
+                rv = self.pi.start_sched()
             except PbsInitServicesError as e:
                 raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
-            return True
+            return rv
 
     def stop(self, sig=None):
         """
@@ -12587,10 +12586,10 @@ class MoM(PBSService):
                                            launcher=launcher)
         else:
             try:
-                self.pi.start_mom()
+                rv = self.pi.start_mom()
             except PbsInitServicesError as e:
                 raise PbsServiceError(rc=e.rc, rv=e.rv, msg=e.msg)
-            return True
+            return rv
 
     def stop(self, sig=None):
         """
@@ -14048,7 +14047,7 @@ class PBSInitServices(object):
             raise PbsInitServicesError(rc=ret['rc'], rv=False,
                                        msg='\n'.join(ret['err']))
         else:
-            return ret['out']
+            return ret
 
     def switch_version(self, hostname=None, version=None):
         """
