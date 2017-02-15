@@ -4089,8 +4089,9 @@ class PBSService(PBSObject):
             try:
                 self.fqdn = socket.gethostbyaddr(self.hostname)[0]
                 if self.hostname != self.fqdn:
-                    self.logger.debug('FQDN name ' + self.fqdn + ' differs '
-                                      'from name provided ' + self.hostname)
+                    self.logger.info('FQDN name ' + self.fqdn + ' differs '
+                                     'from name provided ' + self.hostname)
+                    self.hostname = self.fqdn
             except:
                 pass
         else:

@@ -471,6 +471,7 @@ class SmokeTest(PBSTestSuite):
                                 starttime=self.server.ctime)
         self.assertTrue(rv)
 
+    @skipOnCpuSet
     def test_shrink_to_fit(self):
         """
         Smoke test shrink to fit by setting a dedicated time to start in an
@@ -839,6 +840,7 @@ class SmokeTest(PBSTestSuite):
             d = e.rv
         return d
 
+    @skipOnCpuSet
     def test_shrink_to_fit_resv_barrier(self):
         """
         Test shrink to fit by creating one reservation having ncpus=1,
