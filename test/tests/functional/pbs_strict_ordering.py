@@ -46,10 +46,40 @@ from tests.functional import *
 class TestStrictOrderingAndBackfilling(TestFunctional):
 
     """
-    Test strict ordering when backfilling is truned off
+    Test strict ordering and backfilling
     """
+
+    @tags('smoke')
+    def test_backfilling(self):
+        """
+        Test for backfilling
+        """
+        a = {'resources_available.ncpus': 2}
+        rv = self.server.manager(MGR_CMD_SET, NODE, a, self.mom.shortname,
+                                 expect=True)
+        self.scheduler.set_sched_config({'strict_ordering': 'True'})
+        a = {'Resource_List.select': '1:ncpus=1',
+             'Resource_List.walltime': 3600}
+        j = Job(TEST_USER, attrs=a)
+        jid = self.server.submit(j)
+        self.server.expect(JOB, {'job_state': 'R'}, id=jid)
+        a = {'Resource_List.select': '1:ncpus=2',
+             'Resource_List.walltime': 3600}
+        j = Job(TEST_USER, attrs=a)
+        jid1 = self.server.submit(j)
+        self.server.expect(JOB, 'comment', op=SET, id=jid1)
+        self.server.expect(JOB, {'job_state': 'Q'}, id=jid1)
+        a = {'Resource_List.select': '1:ncpus=1',
+             'Resource_List.walltime': 1800}
+        j = Job(TEST_USER, attrs=a)
+        jid2 = self.server.submit(j)
+        self.server.expect(JOB, {'job_state': 'R'}, id=jid2)
+
     @timeout(1800)
     def test_t1(self):
+    """
+    Test strict ordering when backfilling is truned off
+    """
 
         a = {'resources_available.ncpus': 4}
         self.server.create_vnodes('vn', a, 1, self.mom, usenatvnode=True)
@@ -92,12 +122,12 @@ class TestStrictOrderingAndBackfilling(TestFunctional):
             max_attempts=2,
             interval=2)
         self.assertTrue(rv)
+
+    def test_t2(self):
     """
     Test strict ordering when queue backilling is enabled and server
     backfilling is off
     """
-
-    def test_t2(self):
         rv = self.scheduler.set_sched_config(
             {'by_queue': 'false prime', 'by_queue': 'false non_prime',
              'strict_ordering': 'true all'})

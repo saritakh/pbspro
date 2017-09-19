@@ -43,9 +43,206 @@ from tests.functional import *
 class TestFairshare(TestFunctional):
 
     """
-    Test the pbs_sched fairshare functionality.  Note there are two
-    fairshare tests in the standard smoke test that are not included here.
+    Test the pbs_sched fairshare functionality.  
     """
+
+    @skipOnCpuSet
+    @tags('smoke')
+    def test_fairshare(self):
+        """
+        Test for fairshare
+        """
+        a = {'fair_share': 'true ALL',
+             'fairshare_usage_res': 'ncpus*walltime',
+             'unknown_shares': 10}
+        self.scheduler.set_sched_config(a)
+        a = {'resources_available.ncpus': 4}
+        self.server.create_vnodes('vnode', a, 4, self.mom)
+        a = {'Resource_List.select': '1:ncpus=4'}
+        for _ in range(10):
+            j = Job(TEST_USER1, a)
+            self.server.submit(j)
+        a = {'job_state=R': 4}
+        self.server.expect(JOB, a)
+        self.logger.info('testinfo: waiting for walltime accumulation')
+        running_jobs = self.server.filter(JOB, {'job_state': 'R'})
+        if running_jobs.values():
+            for _j in running_jobs.values()[0]:
+                a = {'resources_used.walltime': (NE, '00:00:00')}
+                self.server.expect(JOB, a, id=_j, interval=1, max_attempts=30)
+        j = Job(TEST_USER2)
+        jid = self.server.submit(j)
+        self.server.expect(JOB, {'job_state': 'Q'}, id=jid, offset=5)
+        self.server.manager(MGR_CMD_SET, SERVER, {'scheduling': 'True'})
+        a = {'server_state': 'Scheduling'}
+        self.server.expect(SERVER, a, op=NE)
+        self.server.manager(MGR_CMD_SET, SERVER, {'scheduling': 'False'})
+        cycle = self.scheduler.cycles(start=self.server.ctime, lastN=10)
+        if len(cycle) > 0:
+            i = len(cycle) - 1
+            while len(cycle[i].political_order) == 0:
+                i -= 1
+            cycle = cycle[i]
+            firstconsidered = cycle.political_order[0]
+            lastsubmitted = jid.split('.')[0]
+            msg = 'testinfo: first job considered [' + str(firstconsidered) + \
+                  '] == last submitted [' + str(lastsubmitted) + ']'
+            self.logger.info(msg)
+            self.assertEqual(firstconsidered, lastsubmitted)
+
+    def setup_fs(self):
+
+        self.scheduler.set_sched_config({'log_filter': '0'})
+
+        self.scheduler.add_to_resource_group('grp1', 100, 'root', 60)
+        self.scheduler.add_to_resource_group('grp2', 200, 'root', 40)
+        self.scheduler.add_to_resource_group('pbsuser1', 101, 'grp1', 40)
+        self.scheduler.add_to_resource_group('pbsuser2', 102, 'grp1', 20)
+        self.scheduler.add_to_resource_group('pbsuser3', 201, 'grp2', 30)
+        self.scheduler.add_to_resource_group('pbsuser4', 202, 'grp2', 10)
+        self.server.manager(MGR_CMD_SET, SERVER, {'scheduler_iteration': 7})
+        a = {'fair_share': 'True', 'fairshare_decay_time': '24:00:00',
+             'fairshare_decay_factor': 0.5}
+        self.scheduler.set_sched_config(a)
+
+    @skipOnCpuSet
+    @tags('smoke')
+    def test_fairshare_enhanced(self):
+        """
+        Test the basic fairshare behavior with custom resources for math module
+        """
+
+        rv = self.server.add_resource('foo1', 'float', 'nh')
+        self.assertTrue(rv)
+
+        self.setup_fs()
+
+        a = {'fairshare_usage_res':
+             'ceil(fabs(-ncpus*(foo1/100.00)*sqrt(100)))'}
+        self.scheduler.set_sched_config(a)
+
+        a = {'resources_available.ncpus': 1, 'resources_available.foo1': 5000}
+        self.server.manager(MGR_CMD_SET, NODE, a, self.mom.shortname)
+
+        self.server.manager(MGR_CMD_SET, SERVER, {'scheduling': 'False'})
+        time.sleep(1)
+        a = {'Resource_List.select': '1:ncpus=1:foo1=20',
+             'Resource_List.walltime': 4}
+        J1 = Job(TEST_USER2, attrs=a)
+        a = {'Resource_List.select': '1:ncpus=1:foo1=20',
+             'Resource_List.walltime': 4}
+        J2 = Job(TEST_USER3, attrs=a)
+        a = {'Resource_List.select': '1:ncpus=1:foo1=20',
+             'Resource_List.walltime': 4}
+        J3 = Job(TEST_USER1, attrs=a)
+        j1id = self.server.submit(J1)
+        j2id = self.server.submit(J2)
+        j3id = self.server.submit(J3)
+        self.server.manager(MGR_CMD_SET, SERVER, {'scheduling': 'True'})
+        rv = self.server.expect(SERVER, {'server_state': 'Scheduling'}, op=NE)
+
+        self.logger.info("Checking the job state of " + j3id)
+        self.server.expect(
+            JOB, {'job_state': 'R'}, id=j3id, max_attempts=30, interval=2)
+        self.server.expect(
+            JOB, {'job_state': 'Q'}, id=j2id, max_attempts=30, interval=2)
+        self.server.expect(
+            JOB, {'job_state': 'Q'}, id=j1id, max_attempts=30, interval=2)
+
+        msg = "Checking the job state of " + j2id + ", runs after "
+        msg += j3id + " completes"
+        self.logger.info(msg)
+        self.server.expect(
+            JOB, {'job_state': 'R'}, id=j2id, max_attempts=30, interval=2)
+        self.server.expect(
+            JOB, {'job_state': 'Q'}, id=j1id, max_attempts=30, interval=2)
+
+        msg = "Checking the job state of " + j1id + ", runs after "
+        msg += j2id + " completes"
+        self.logger.info(msg)
+        self.server.expect(
+            JOB, {'job_state': 'R'}, id=j1id, max_attempts=30, interval=2)
+
+        self.server.log_match(
+            j1id + ";Exit_status", max_attempts=30, interval=2)
+
+        time.sleep(1)
+
+        fs1 = self.scheduler.query_fairshare(name=str(TEST_USER1))
+        self.logger.info('Checking ' + str(fs1.usage) + " == 3")
+        self.assertEqual(fs1.usage, 3)
+
+        fs2 = self.scheduler.query_fairshare(name=str(TEST_USER2))
+        self.logger.info('Checking ' + str(fs2.usage) + " == 3")
+        self.assertEqual(fs2.usage, 3)
+
+        fs3 = self.scheduler.query_fairshare(name=str(TEST_USER3))
+        self.logger.info('Checking ' + str(fs3.usage) + " == 3")
+        self.assertEqual(fs3.usage, 3)
+
+        fs4 = self.scheduler.query_fairshare(name=str(TEST_USER4))
+        self.logger.info('Checking ' + str(fs4.usage) + " == 1")
+        self.assertEqual(fs4.usage, 1)
+
+        self.server.manager(MGR_CMD_SET, SERVER, {'scheduling': 'False'})
+        time.sleep(1)
+        a = {'Resource_List.select': '1:ncpus=1:foo1=20',
+             'Resource_List.walltime': 4}
+        J1 = Job(TEST_USER4, attrs=a)
+        a = {'Resource_List.select': '1:ncpus=1:foo1=20',
+             'Resource_List.walltime': 4}
+        J2 = Job(TEST_USER2, attrs=a)
+        a = {'Resource_List.select': '1:ncpus=1:foo1=20',
+             'Resource_List.walltime': 4}
+        J3 = Job(TEST_USER1, attrs=a)
+        j1id = self.server.submit(J1)
+        j2id = self.server.submit(J2)
+        j3id = self.server.submit(J3)
+        self.server.manager(MGR_CMD_SET, SERVER, {'scheduling': 'True'})
+        rv = self.server.expect(SERVER, {'server_state': 'Scheduling'}, op=NE)
+
+        self.logger.info("Checking the job state of " + j1id)
+        self.server.expect(
+            JOB, {'job_state': 'R'}, id=j1id, max_attempts=30, interval=2)
+        self.server.expect(
+            JOB, {'job_state': 'Q'}, id=j2id, max_attempts=30, interval=2)
+        self.server.expect(
+            JOB, {'job_state': 'Q'}, id=j3id, max_attempts=30, interval=2)
+
+        msg = "Checking the job state of " + j3id + ", runs after "
+        msg += j1id + " completes"
+        self.logger.info(msg)
+        self.server.expect(
+            JOB, {'job_state': 'R'}, id=j3id, max_attempts=30, interval=2)
+        self.server.expect(
+            JOB, {'job_state': 'Q'}, id=j2id, max_attempts=30, interval=2)
+
+        msg = "Checking the job state of " + j2id + ", runs after "
+        msg += j1id + " completes"
+        self.logger.info(msg)
+        self.server.expect(
+            JOB, {'job_state': 'R'}, id=j2id, max_attempts=30, interval=2)
+
+        self.server.log_match(
+            j2id + ";Exit_status", max_attempts=30, interval=2)
+
+        time.sleep(1)
+
+        fs1 = self.scheduler.query_fairshare(name=str(TEST_USER1))
+        self.logger.info('Checking ' + str(fs1.usage) + " == 5")
+        self.assertEqual(fs1.usage, 5)
+
+        fs2 = self.scheduler.query_fairshare(name=str(TEST_USER2))
+        self.logger.info('Checking ' + str(fs2.usage) + " == 5")
+        self.assertEqual(fs2.usage, 5)
+
+        fs3 = self.scheduler.query_fairshare(name=str(TEST_USER3))
+        self.logger.info('Checking ' + str(fs3.usage) + " == 3")
+        self.assertEqual(fs3.usage, 3)
+
+        fs4 = self.scheduler.query_fairshare(name=str(TEST_USER4))
+        self.logger.info('Checking ' + str(fs4.usage) + " == 3")
+        self.assertEqual(fs4.usage, 3)
 
     def set_up_resource_group(self):
         """

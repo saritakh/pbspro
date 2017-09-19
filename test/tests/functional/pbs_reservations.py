@@ -47,6 +47,84 @@ class TestReservations(TestFunctional):
     reservations
     """
 
+    @tags('smoke')
+    def test_advance_reservation(self):
+        """
+        Test to submit an advanced reservation
+        """
+        r = Reservation()
+        a = {'Resource_List.select': '1:ncpus=1'}
+        r.set_attributes(a)
+        rid = self.server.submit(r)
+        a = {'reserve_state': (MATCH_RE, "RESV_CONFIRMED|2")}
+        self.server.expect(RESV, a, id=rid)
+
+    @tags('smoke')
+    def test_standing_reservation(self):
+        """
+        Test to submit a standing reservation
+        """
+        # PBS_TZID environment variable must be set, there is no way to set
+        # it through the API call, use CLI instead for this test
+
+        _m = self.server.get_op_mode()
+        if _m != PTL_CLI:
+            self.server.set_op_mode(PTL_CLI)
+        if 'PBS_TZID' in self.conf:
+            tzone = self.conf['PBS_TZID']
+        elif 'PBS_TZID' in os.environ:
+            tzone = os.environ['PBS_TZID']
+        else:
+            self.logger.info('Missing timezone, using America/Los_Angeles')
+            tzone = 'America/Los_Angeles'
+        a = {'Resource_List.select': '1:ncpus=1',
+             ATTR_resv_rrule: 'FREQ=WEEKLY;COUNT=3',
+             ATTR_resv_timezone: tzone,
+             ATTR_resv_standing: '1',
+             'reserve_start': time.time() + 20,
+             'reserve_end': time.time() + 30, }
+        r = Reservation(TEST_USER, a)
+        rid = self.server.submit(r)
+        a = {'reserve_state': (MATCH_RE, "RESV_CONFIRMED|2")}
+        self.server.expect(RESV, a, id=rid)
+        if _m == PTL_API:
+            self.server.set_op_mode(PTL_API)
+
+    @skipOnCpuSet
+    @tags('smoke')
+    def test_degraded_advance_reservation(self):
+        """
+        Make reservations more fault tolerant
+        Test for an advance reservation
+        """
+
+        now = int(time.time())
+        a = {'reserve_retry_init': 5, 'reserve_retry_cutoff': 1}
+        self.server.manager(MGR_CMD_SET, SERVER, a)
+        a = {'resources_available.ncpus': 4}
+        self.server.create_vnodes('vn', a, num=2, mom=self.mom)
+        a = {'Resource_List.select': '1:ncpus=4',
+             'reserve_start': now + 3600,
+             'reserve_end': now + 7200}
+        r = Reservation(TEST_USER, attrs=a)
+        rid = self.server.submit(r)
+        a = {'reserve_state': (MATCH_RE, 'RESV_CONFIRMED|2')}
+        self.server.expect(RESV, a, id=rid)
+        self.server.status(RESV, 'resv_nodes', id=rid)
+        resv_node = self.server.reservations[rid].get_vnodes()[0]
+        a = {'state': 'offline'}
+        self.server.manager(MGR_CMD_SET, NODE, a, id=resv_node)
+        a = {'reserve_state': (MATCH_RE, 'RESV_DEGRADED|10')}
+        self.server.expect(RESV, a, id=rid)
+        a = {'resources_available.ncpus': (GT, 0)}
+        free_nodes = self.server.filter(NODE, a)
+        nodes = free_nodes.values()[0]
+        other_node = [nodes[0], nodes[1]][resv_node == nodes[0]]
+        a = {'reserve_state': (MATCH_RE, 'RESV_CONFIRMED|2'),
+             'resv_nodes': (MATCH_RE, re.escape(other_node))}
+        self.server.expect(RESV, a, id=rid, offset=3, attrop=PTL_AND)
+
+    @skipOnCpuSet
     def submit_standing_reservation(self, user, select, rrule, start, end):
         """
         helper method to submit a standing reservation
