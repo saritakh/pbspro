@@ -75,6 +75,33 @@ class TestStrictOrderingAndBackfilling(TestFunctional):
         jid2 = self.server.submit(j)
         self.server.expect(JOB, {'job_state': 'R'}, id=jid2)
 
+    @tags('smoke')
+    @skipOnCpuSet
+    def test_job_scheduling_order(self):
+        """
+        Test for job scheduling order
+        """
+        a = {'backfill_depth': 5}
+        self.server.manager(MGR_CMD_SET, SERVER, a, expect=True)
+        self.scheduler.set_sched_config({'strict_ordering': 'True'})
+        a = {'resources_available.ncpus': '1'}
+        self.server.manager(MGR_CMD_SET, NODE, a, self.mom.shortname,
+                            expect=True)
+        a = {'state=free': 1}
+        self.server.expect(VNODE, a, attrop=PTL_AND)
+        a = {'scheduling': 'False'}
+        self.server.manager(MGR_CMD_SET, SERVER, a, expect=True)
+        for _ in range(6):
+            j = Job(TEST_USER, attrs={'Resource_List.select': '1:ncpus=1',
+                                      'Resource_List.walltime': 3600})
+            self.server.submit(j)
+        a = {'scheduling': 'True'}
+        self.server.manager(MGR_CMD_SET, SERVER, a, expect=True)
+        a = {'server_state': 'Scheduling'}
+        self.server.expect(SERVER, a, op=NE)
+        self.server.expect(JOB, {'estimated.start_time': 5},
+                           count=True, op=SET)
+
     @timeout(1800)
     def test_t1(self):
     """

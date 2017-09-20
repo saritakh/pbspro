@@ -71,57 +71,6 @@ class SmokeTest(PBSTestSuite):
         a = {'resources_available.ncpus=20': 10}
         self.server.expect(VNODE, a, count=True, interval=5)
 
-    def test_create_execution_queue(self):
-        """
-        Test to create execution queue
-        """
-        qname = 'testq'
-        try:
-            self.server.manager(MGR_CMD_DELETE, QUEUE, None, qname)
-        except:
-            pass
-        a = {'queue_type': 'Execution', 'enabled': 'True', 'started': 'True'}
-        self.server.manager(MGR_CMD_CREATE, QUEUE, a, qname, expect=True)
-        self.server.manager(MGR_CMD_DELETE, QUEUE, id=qname)
-
-    def test_create_routing_queue(self):
-        """
-        Test to create routing queue
-        """
-        qname = 'routeq'
-        try:
-            self.server.manager(MGR_CMD_DELETE, QUEUE, None, qname)
-        except:
-            pass
-        a = {'queue_type': 'Route', 'started': 'True'}
-        self.server.manager(MGR_CMD_CREATE, QUEUE, a, qname, expect=True)
-        self.server.manager(MGR_CMD_DELETE, QUEUE, id=qname)
-
-    @skipOnCpuSet
-    def test_job_scheduling_order(self):
-        """
-        Test for job scheduling order
-        """
-        a = {'backfill_depth': 5}
-        self.server.manager(MGR_CMD_SET, SERVER, a, expect=True)
-        self.scheduler.set_sched_config({'strict_ordering': 'True'})
-        a = {'resources_available.ncpus': '1'}
-        self.server.manager(MGR_CMD_SET, NODE, a, self.mom.shortname,
-                            expect=True)
-        a = {'state=free': 1}
-        self.server.expect(VNODE, a, attrop=PTL_AND)
-        a = {'scheduling': 'False'}
-        self.server.manager(MGR_CMD_SET, SERVER, a, expect=True)
-        for _ in range(6):
-            j = Job(TEST_USER, attrs={'Resource_List.select': '1:ncpus=1',
-                                      'Resource_List.walltime': 3600})
-            self.server.submit(j)
-        a = {'scheduling': 'True'}
-        self.server.manager(MGR_CMD_SET, SERVER, a, expect=True)
-        a = {'server_state': 'Scheduling'}
-        self.server.expect(SERVER, a, op=NE)
-        self.server.expect(JOB, {'estimated.start_time': 5},
-                           count=True, op=SET)
 
     @skipOnCray
     @skipOnCpuSet
@@ -151,43 +100,6 @@ class SmokeTest(PBSTestSuite):
         self.server.expect(JOB, {'job_state': 'R'}, id=j2id)
         self.server.expect(JOB, {'job_state': 'S'}, id=jid)
 
-
-    def test_server_hook(self):
-        """
-        Create a hook, import a hook content that rejects all jobs, verify
-        that a job is rejected by the hook.
-        """
-        hook_name = "testhook"
-        hook_body = "import pbs\npbs.event().reject('my custom message')\n"
-        a = {'event': 'queuejob', 'enabled': 'True'}
-        self.server.create_import_hook(hook_name, a, hook_body)
-        self.server.manager(MGR_CMD_SET, SERVER, {'log_events': 2047},
-                            expect=True)
-        j = Job(TEST_USER)
-        try:
-            self.server.submit(j)
-        except PbsSubmitError:
-            pass
-        self.server.log_match("my custom message")
-
-    def test_mom_hook(self):
-        """
-        Create a hook, import a hook content that rejects all jobs, verify
-        that a job is rejected by the hook.
-        """
-        hook_name = "momhook"
-        hook_body = "import pbs\npbs.event().reject('my custom message')\n"
-        a = {'event': 'execjob_begin', 'enabled': 'True'}
-        self.server.create_import_hook(hook_name, a, hook_body)
-        # Asynchronous copy of hook content, we wait for the copy to occur
-        self.server.log_match(".*successfully sent hook file.*" +
-                              hook_name + ".PY" + ".*", regexp=True,
-                              max_attempts=100, interval=5)
-        j = Job(TEST_USER)
-        jid = self.server.submit(j)
-        self.server.expect(JOB, {ATTR_state: 'H'}, id=jid)
-        self.mom.log_match("my custom message", max_attempts=10,
-                           starttime=self.server.ctime)
 
     @skipOnCpuSet
     def test_shrink_to_fit(self):
@@ -251,26 +163,6 @@ class SmokeTest(PBSTestSuite):
         self.server.expect(JOB, 'queue', op=UNSET, id=jid, offset=2)
         self.du.rm(self.server.hostname, fn, force=True, sudo=True)
         self.du.rm(self.server.hostname, fn + '2', force=True, sudo=True)
-
-    def test_route_queue(self):
-        """
-        Verify that a routing queue routes a job into the appropriate execution
-        queue.
-        """
-        a = {'queue_type': 'Execution', 'resources_min.ncpus': 1,
-             'enabled': 'True', 'started': 'False'}
-        self.server.manager(MGR_CMD_CREATE, QUEUE, a, id='specialq')
-        dflt_q = self.server.default_queue
-        a = {'queue_type': 'route',
-             'route_destinations': dflt_q + ',specialq',
-             'enabled': 'True', 'started': 'True'}
-        self.server.manager(MGR_CMD_CREATE, QUEUE, a, id='routeq')
-        a = {'resources_min.ncpus': 4}
-        self.server.manager(MGR_CMD_SET, QUEUE, a, id=dflt_q)
-        j = Job(TEST_USER, attrs={ATTR_queue: 'routeq',
-                                  'Resource_List.ncpus': 1})
-        jid = self.server.submit(j)
-        self.server.expect(JOB, {ATTR_queue: 'specialq'}, id=jid)
 
     @skipOnCpuSet
     def test_by_queue(self):
