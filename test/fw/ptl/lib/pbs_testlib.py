@@ -5100,6 +5100,7 @@ class Server(PBSService):
                 reverthooks = False
             hooks = self.status(HOOK, level=logging.DEBUG)
             hooks = [h['id'] for h in hooks]
+            hooks.remove('Docker_Hpc')
             if len(hooks) > 0:
                 self.manager(MGR_CMD_DELETE, HOOK, id=hooks, expect=True)
         if delqueues:
@@ -5133,6 +5134,7 @@ class Server(PBSService):
                              'PBS_translate_mpp')
             hooks = self.status(HOOK, level=logging.DEBUG)
             hooks = [h['id'] for h in hooks]
+            hooks.remove('Docker_Hpc')
             a = {ATTR_enable: 'false'}
             if len(hooks) > 0:
                 self.manager(MGR_CMD_SET, MGR_OBJ_HOOK, a, hooks,
@@ -5159,6 +5161,7 @@ class Server(PBSService):
             try:
                 rescs = self.status(RSC)
                 rescs = [r['id'] for r in rescs]
+                rescs.remove('contains_docker')
             except:
                 rescs = []
             if len(rescs) > 0:

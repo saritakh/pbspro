@@ -861,6 +861,8 @@ class PBSTestSuite(unittest.TestCase):
         _msg = 'No license found on server %s' % (server.shortname)
         self.assertTrue(rv, _msg)
         self.logger.info('server: %s licensed', server.hostname)
+        a = {ATTR_dfltqsubargs: '\'-v DOCKER_IMAGE=centos\''}
+        server.manager(MGR_CMD_SET, SERVER, a, sudo=True)
 
     def revert_comm(self, comm, force=False):
         """
