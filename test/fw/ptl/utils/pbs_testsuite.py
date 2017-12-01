@@ -955,6 +955,8 @@ class PBSTestSuite(unittest.TestCase):
                                         mom.shortname)
         self.server.expect(NODE, {ATTR_NODE_state: 'free'}, id=name,
                            interval=1)
+        a = {'$logevent': 65535}
+        mom.add_config(a)
         return mom
 
     def analyze_logs(self):

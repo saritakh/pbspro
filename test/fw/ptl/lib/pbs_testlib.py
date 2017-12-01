@@ -5161,7 +5161,7 @@ class Server(PBSService):
             try:
                 rescs = self.status(RSC)
                 rescs = [r['id'] for r in rescs]
-                rescs.remove('contains_docker')
+                rescs.remove('allows_container')
             except:
                 rescs = []
             if len(rescs) > 0:
@@ -8292,6 +8292,9 @@ class Server(PBSService):
                             wait=True)
             except:
                 pass
+        for jd in job_ids:
+            self.log_match(jd + ";dequeuing from", id=jd, max_attempts=30, interval=2)
+
         rv = self.expect(JOB, {'job_state': 0}, count=True, op=SET)
         if not rv:
             return self.cleanup_jobs(extend=extend, runas=runas)
@@ -10956,6 +10959,7 @@ class Scheduler(PBSService):
             self.add_resource('vntype')
         self.fairshare_tree = None
         self.resource_group = None
+        self.add_resource('allows_container')
         return self.isUp()
 
     def save_configuration(self, outfile, mode='a'):
@@ -12768,6 +12772,7 @@ class MoM(PBSService):
         sethost = False
 
         attribs = attrs.copy()
+        attribs["resources_available.allows_container"] = 'True'
         if not sharednode and 'resources_available.host' not in attrs:
             sethost = True
 
