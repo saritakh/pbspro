@@ -13314,6 +13314,7 @@ class Job(ResourceResv):
         ATTR_p: '0',
         ATTR_r: 'y',
         ATTR_k: 'oe',
+        ATTR_v: 'CONTAINER_IMAGE=centos'
     }
     runtime = 100
     logger = logging.getLogger(__name__)

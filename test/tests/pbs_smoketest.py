@@ -1249,7 +1249,10 @@ class SmokeTest(PBSTestSuite):
                 val = 'abc'
             if obj_type in [JOB, RESV]:
                 if obj_type == JOB:
-                    j = Job(TEST_USER1, {'Resource_List.' + r: val})
+                    if 'h' in str(f):
+                        j = Job(TEST_USER1, {'Resource_List.select': '1:' + r + '=' + str(val)})
+                    else:
+                        j = Job(TEST_USER1, {'Resource_List.' + r: val})
                 else:
                     j = Reservation(TEST_USER1, {'Resource_List.' + r: val})
                 try:
