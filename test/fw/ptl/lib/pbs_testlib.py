@@ -1,6 +1,6 @@
 # coding: utf-8
 
-# Copyright (C) 1994-2018 Altair Engineering, Inc.
+# Copyright (C) 1994-2017 Altair Engineering, Inc.
 # For more information, contact Altair at www.altair.com.
 #
 # This file is part of the PBS Professional ("PBS Pro") software.
@@ -13,23 +13,24 @@
 # later version.
 #
 # PBS Pro is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.
-# See the GNU Affero General Public License for more details.
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+# details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 # Commercial License Information:
 #
-# For a copy of the commercial license terms and conditions,
-# go to: (http://www.pbspro.com/UserArea/agreement.html)
-# or contact the Altair Legal Department.
+# The PBS Pro software is licensed under the terms of the GNU Affero General
+# Public License agreement ("AGPL"), except where a separate commercial license
+# agreement for PBS Pro version 14 or later has been executed in writing with
+# Altair.
 #
 # Altair’s dual-license business model allows companies, individuals, and
 # organizations to create proprietary derivative works of PBS Pro and
-# distribute them - whether embedded or bundled with other software -
-# under a commercial license agreement.
+# distribute them - whether embedded or bundled with other software - under
+# a commercial license agreement.
 #
 # Use of Altair’s trademarks, including but not limited to "PBS™",
 # "PBS Professional®", and "PBS Pro™" and Altair’s logos is subject to Altair's
@@ -5096,6 +5097,10 @@ class Server(PBSService):
                 continue
             else:
                 unsetlist.append(k)
+        attrret = ['resources_available.cloud_min_instances', 'resources_available.cloud_max_instances', 'resources_available.cloud_min_uptime'];
+        for a in attrret:
+            if a in unsetlist:
+                unsetlist.remove(a) 
         if len(unsetlist) != 0:
             self.manager(MGR_CMD_UNSET, MGR_OBJ_SERVER, unsetlist)
         for k in self.dflt_attributes.keys():
@@ -5111,12 +5116,18 @@ class Server(PBSService):
                 reverthooks = False
             hooks = self.status(HOOK, level=logging.DEBUG)
             hooks = [h['id'] for h in hooks]
+            if 'cloud_burst' in hooks:
+                hooks.remove('cloud_burst')
             if len(hooks) > 0:
                 self.manager(MGR_CMD_DELETE, HOOK, id=hooks, expect=True)
         if delqueues:
             revertqueues = False
+            queueret = ['cloudq','cloudq2','cloudq3'];
             queues = self.status(QUEUE, level=logging.DEBUG)
             queues = [q['id'] for q in queues]
+            for q in queueret:
+                if q in queues:
+                    queues.remove(q)
             if len(queues) > 0:
                 try:
                     nodes = self.status(VNODE, logerr=False)
@@ -5156,11 +5167,14 @@ class Server(PBSService):
                     self.signal('-HUP')
             hooks = self.status(HOOK, level=logging.DEBUG)
             hooks = [h['id'] for h in hooks]
+            if 'cloud_burst' in hooks:
+                hooks.remove('cloud_burst')
             a = {ATTR_enable: 'false'}
             if len(hooks) > 0:
                 self.manager(MGR_CMD_SET, MGR_OBJ_HOOK, a, hooks,
                              expect=True)
         if revertqueues:
+            queueret = ['cloudq','cloudq2','cloudq3'];
             self.status(QUEUE, level=logging.DEBUG)
             queues = []
             for (qname, qobj) in self.queues.items():
@@ -5179,9 +5193,15 @@ class Server(PBSService):
         if len(setdict) > 0:
             self.manager(MGR_CMD_SET, MGR_OBJ_SERVER, setdict)
         if revertresources:
+            resret = ['cloud_instance_type','cloud_max_instances','cloud_min_instances',
+                      'cloud_provisioned_time','cloud','cloud_min_uptime',
+                      'cloud_node_instance_type','node_location','max_jobs_checked_per_queue','optistruct'];
             try:
                 rescs = self.status(RSC)
                 rescs = [r['id'] for r in rescs]
+                for x in resret:
+                    if x in rescs:
+                        rescs.remove(x)
             except:
                 rescs = []
             if len(rescs) > 0:
