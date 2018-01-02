@@ -4685,6 +4685,16 @@ class Server(PBSService):
 
             self.update_version_info()
 
+        self.retainables = {'resret' : ['cloud_instance_type','cloud_max_instances','cloud_min_instances',
+                                      'cloud_provisioned_time','cloud','cloud_min_uptime',
+                                      'cloud_node_instance_type','node_location','max_jobs_checked_per_queue','optistruct'],
+                            'queueret' : ['cloudq','cloudq2','cloudq3'],
+                            'attrret' : ['resources_available.cloud_min_instances', 'resources_available.cloud_max_instances',
+                                       'resources_available.cloud_min_uptime', 'node_group_enable','node_group_key'],
+                            'qattrret' : ['resources_default.node_location'],
+                            'hookret' : ['cloud_burst']
+                            }
+
     def update_version_info(self):
         """
         Update the version information.
@@ -5097,10 +5107,10 @@ class Server(PBSService):
                 continue
             else:
                 unsetlist.append(k)
-        attrret = ['resources_available.cloud_min_instances', 'resources_available.cloud_max_instances', 'resources_available.cloud_min_uptime'];
-        for a in attrret:
-            if a in unsetlist:
-                unsetlist.remove(a) 
+        if len(attrret_list)>0:
+            for a in attrret_list:
+                if a in unsetlist:
+                    unsetlist.remove(a) 
         if len(unsetlist) != 0:
             self.manager(MGR_CMD_UNSET, MGR_OBJ_SERVER, unsetlist)
         for k in self.dflt_attributes.keys():
@@ -5116,8 +5126,10 @@ class Server(PBSService):
                 reverthooks = False
             hooks = self.status(HOOK, level=logging.DEBUG)
             hooks = [h['id'] for h in hooks]
-            if 'cloud_burst' in hooks:
-                hooks.remove('cloud_burst')
+            hookret_list = self.retainables.get('hookret')
+            if len(hookret_list) > 0:
+                for h in hookret_list:
+                    hooks.remove(h)
             if len(hooks) > 0:
                 self.manager(MGR_CMD_DELETE, HOOK, id=hooks, expect=True)
         if delqueues:
@@ -5125,6 +5137,11 @@ class Server(PBSService):
             queueret = ['cloudq','cloudq2','cloudq3'];
             queues = self.status(QUEUE, level=logging.DEBUG)
             queues = [q['id'] for q in queues]
+            queueret_list = self.retainables.get('queueret')
+            if len(queueret_list) > 0:
+                for q in queueret_list:
+                    if q in queues:
+                        queues.remove(q)
             for q in queueret:
                 if q in queues:
                     queues.remove(q)
@@ -5167,8 +5184,10 @@ class Server(PBSService):
                     self.signal('-HUP')
             hooks = self.status(HOOK, level=logging.DEBUG)
             hooks = [h['id'] for h in hooks]
-            if 'cloud_burst' in hooks:
-                hooks.remove('cloud_burst')
+            hookret_list = self.retainables.get('hookret')
+            if len(hookret_list) > 0:
+                for h in hookret_list:
+                    hooks.remove(h)
             a = {ATTR_enable: 'false'}
             if len(hooks) > 0:
                 self.manager(MGR_CMD_SET, MGR_OBJ_HOOK, a, hooks,
@@ -5183,6 +5202,9 @@ class Server(PBSService):
                 if (qname.startswith('R') or qname.startswith('S') or
                         qname == server_stat[ATTR_dfltque]):
                     continue
+                if len(queueret_list) > 0:
+                    if qname in queueret_list:
+                        continue
                 qobj.revert_to_defaults()
                 queues.append(qname)
                 a = {ATTR_enable: 'false'}
@@ -5193,12 +5215,14 @@ class Server(PBSService):
         if len(setdict) > 0:
             self.manager(MGR_CMD_SET, MGR_OBJ_SERVER, setdict)
         if revertresources:
-            resret = ['cloud_instance_type','cloud_max_instances','cloud_min_instances',
-                      'cloud_provisioned_time','cloud','cloud_min_uptime',
-                      'cloud_node_instance_type','node_location','max_jobs_checked_per_queue','optistruct'];
             try:
                 rescs = self.status(RSC)
                 rescs = [r['id'] for r in rescs]
+                resret_list = self.retainables.get('resret')
+                if len(resret_list) > 0:
+                    for x in resret_list:
+                        if x in rescs:
+                            rescs.remove(x)
                 for x in resret:
                     if x in rescs:
                         rescs.remove(x)
