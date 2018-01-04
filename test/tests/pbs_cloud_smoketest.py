@@ -53,32 +53,32 @@ class CloudSmokeTest(PBSTestSuite):
         """
         Test to submit a job
         """
+
+        a = {'log_events': 2047}
+        self.server.manager(MGR_CMD_SET, SERVER, a, expect=True)
+
+        self.scheduler.add_resource('node_location',apply=True)
+        a = {'resources_default.node_location': 'local'}
+        self.server.manager(MGR_CMD_SET, QUEUE, a, id='workq')
+
         j1 = Job(TEST_USER)
-        j2 = Job(TEST_USER)
-        j3 = Job(TEST_USER,
-                 attrs={'queue': 'cloudq',
+        j2 = Job('centos',
+                 attrs={'queue': 'cloudq3',
+                        'Resource_List.select': '1:ncpus=1'})
+        j2.set_sleep_time(1000)
+
+
+        j3 = Job('centos',
+                 attrs={'queue': 'cloudq3',
                         'Resource_List.select': '1:ncpus=1'})
 
         #jid1 = self.server.submit(j1)
-        #jid2 = self.server.submit(j2)
+        jid2 = self.server.submit(j2)
         jid3 = self.server.submit(j3)
+
         #self.server.expect(JOB, {'job_state': 'R'}, id=jid1)
-        #self.server.expect(JOB, {'job_state': 'R'}, id=jid2)
-
-        #nodes = self.server.filter(
-        #    NODE, {
-        #        'resources_available.vnode': (MATCH,'test-cloud-')})
-        #nodename = nodes.values()[0][0]
-
+        self.server.expect(JOB, {'job_state': 'R'}, id=jid2)
         self.server.expect(JOB, {'job_state': 'R'}, id=jid3,
                            max_attempts=60,interval=10)
 
-
-        nodes = self.server.filter(
-            NODE, {
-                'resources_available.vnode': (MATCH,CLOUD)})
-        nodename = nodes.values()[0][0]
-        if len(nodename) > 0:
-            self.logger.info('Found cloud node')
-
-
+        self.server.expect(JOB, {'exec_vnode': (MATCH,CLOUD)}, id=jid3)

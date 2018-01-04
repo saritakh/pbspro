@@ -5088,6 +5088,7 @@ class Server(PBSService):
         ignore_attrs += [ATTR_pbs_license_info]
         unsetlist = []
         setdict = {}
+        attrret_list = self.retainables.get('attrret')
         self.logger.info(self.logprefix +
                          'reverting configuration to defaults')
         self.cleanup_jobs_and_reservations()
@@ -5134,7 +5135,6 @@ class Server(PBSService):
                 self.manager(MGR_CMD_DELETE, HOOK, id=hooks, expect=True)
         if delqueues:
             revertqueues = False
-            queueret = ['cloudq','cloudq2','cloudq3'];
             queues = self.status(QUEUE, level=logging.DEBUG)
             queues = [q['id'] for q in queues]
             queueret_list = self.retainables.get('queueret')
@@ -5142,9 +5142,6 @@ class Server(PBSService):
                 for q in queueret_list:
                     if q in queues:
                         queues.remove(q)
-            for q in queueret:
-                if q in queues:
-                    queues.remove(q)
             if len(queues) > 0:
                 try:
                     nodes = self.status(VNODE, logerr=False)
@@ -5193,7 +5190,7 @@ class Server(PBSService):
                 self.manager(MGR_CMD_SET, MGR_OBJ_HOOK, a, hooks,
                              expect=True)
         if revertqueues:
-            queueret = ['cloudq','cloudq2','cloudq3'];
+            queueret_list = self.retainables.get('queueret')
             self.status(QUEUE, level=logging.DEBUG)
             queues = []
             for (qname, qobj) in self.queues.items():
@@ -5223,9 +5220,6 @@ class Server(PBSService):
                     for x in resret_list:
                         if x in rescs:
                             rescs.remove(x)
-                for x in resret:
-                    if x in rescs:
-                        rescs.remove(x)
             except:
                 rescs = []
             if len(rescs) > 0:
