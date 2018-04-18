@@ -4675,6 +4675,13 @@ class Server(PBSService):
 
             self.update_version_info()
 
+        self.retainables = {'resret' : [],
+                            'queueret' : [],
+                            'attrret' : [],
+                            'qattrret' : [],
+                            'hookret' : []
+                            }
+
     def update_version_info(self):
         """
         Update the version information.
@@ -5068,6 +5075,7 @@ class Server(PBSService):
         ignore_attrs += [ATTR_pbs_license_info,  ATTR_power_provisioning]
         unsetlist = []
         setdict = {}
+        attrret_list = self.retainables.get('attrret')
         self.logger.info(self.logprefix +
                          'reverting configuration to defaults')
         self.cleanup_jobs_and_reservations()
@@ -5087,6 +5095,10 @@ class Server(PBSService):
                 continue
             else:
                 unsetlist.append(k)
+        if len(attrret_list)>0:
+            for a in attrret_list:
+                if a in unsetlist:
+                    unsetlist.remove(a) 
         if len(unsetlist) != 0:
             self.manager(MGR_CMD_UNSET, MGR_OBJ_SERVER, unsetlist)
         for k in self.dflt_attributes.keys():
@@ -5108,6 +5120,11 @@ class Server(PBSService):
             revertqueues = False
             queues = self.status(QUEUE, level=logging.DEBUG)
             queues = [q['id'] for q in queues]
+            queueret_list = self.retainables.get('queueret')
+            if len(queueret_list) > 0:
+                for q in queueret_list:
+                    if q in queues:
+                        queues.remove(q)
             if len(queues) > 0:
                 try:
                     nodes = self.status(VNODE, logerr=False)
@@ -5152,6 +5169,7 @@ class Server(PBSService):
                 self.manager(MGR_CMD_SET, MGR_OBJ_HOOK, a, hooks,
                              expect=True)
         if revertqueues:
+            queueret_list = self.retainables.get('queueret')
             self.status(QUEUE, level=logging.DEBUG)
             queues = []
             for (qname, qobj) in self.queues.items():
@@ -5160,6 +5178,9 @@ class Server(PBSService):
                 if (qname.startswith('R') or qname.startswith('S') or
                         qname == server_stat[ATTR_dfltque]):
                     continue
+                if len(queueret_list) > 0:
+                    if qname in queueret_list:
+                        continue
                 qobj.revert_to_defaults()
                 queues.append(qname)
                 a = {ATTR_enable: 'false'}
@@ -5173,6 +5194,11 @@ class Server(PBSService):
             try:
                 rescs = self.status(RSC)
                 rescs = [r['id'] for r in rescs]
+                resret_list = self.retainables.get('resret')
+                if len(resret_list) > 0:
+                    for x in resret_list:
+                        if x in rescs:
+                            rescs.remove(x)
             except:
                 rescs = []
             if len(rescs) > 0:

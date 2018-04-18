@@ -744,6 +744,25 @@ class PBSTestSuite(unittest.TestCase):
             if 'conn_timeout' in cls.conf:
                 conn_timeout = int(cls.conf['conn_timeout'])
                 server.set_connect_timeout(conn_timeout)
+
+            #Custom setup defaults to be retained
+            strlist = ['resource', 'queue', 'serverattr',
+                       'qattr']
+            for a in strlist:
+                rlist = []
+                for i in range(10):
+                    keyid = a + str(i)
+                    if keyid in cls.conf.keys():
+                        rlist.append(cls.conf[keyid])
+                if a is 'resource':
+                    server.retainables['resret'] = rlist
+                elif a is 'queue':
+                    server.retainables['queueret'] = rlist
+                elif a is 'serverattr':
+                    server.retainables['attrret'] = rlist
+                elif a is 'qattr':
+                    server.retainables['qttrret'] = rlist
+
         sched_action = ExpectAction('kicksched', True, JOB,
                                     cls.kicksched_action)
         server.add_expect_action(action=sched_action)
@@ -887,10 +906,10 @@ class PBSTestSuite(unittest.TestCase):
                                       delscheds=self.del_scheds,
                                       revertresources=self.revert_resources,
                                       server_stat=server_stat)
-        rv = self.is_server_licensed(server)
-        _msg = 'No license found on server %s' % (server.shortname)
-        self.assertTrue(rv, _msg)
-        self.logger.info('server: %s licensed', server.hostname)
+        #rv = self.is_server_licensed(server)
+        #_msg = 'No license found on server %s' % (server.shortname)
+        #self.assertTrue(rv, _msg)
+        #self.logger.info('server: %s licensed', server.hostname)
 
     def revert_comm(self, comm, force=False):
         """
