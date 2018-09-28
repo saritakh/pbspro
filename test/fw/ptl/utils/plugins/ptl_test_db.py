@@ -43,6 +43,7 @@ import logging
 import platform
 import traceback
 import time
+import json
 import ptl.utils.pbs_logutils as lu
 from ptl.lib.pbs_testlib import PbsTypeDuration
 
@@ -1583,6 +1584,68 @@ class HTMLDb(DBType):
             v.flush()
             v.close()
 
+class JSONDb(DBType):
+
+    """
+    JSON type database
+    """
+
+    def __init__(self, dbtype, dbpath, dbaccess):
+        DBType.__init__(self, dbtype, dbpath, dbaccess)
+        if self.dbtype != 'json':
+            _msg = 'db type does not match with my type(json)'
+            raise PTLDbError(rc=1, rv=False, msg=_msg)
+        if self.dbpath is None:
+            _msg = 'Db path require!'
+            raise PTLDbError(rc=1, rv=False, msg=_msg)
+        elif not self.dbpath.endswith('.json'):
+            self.dbpath = self.dbpath.rstrip('.db') + '.json'
+        self.__cmd = [os.path.basename(sys.argv[0])]
+        self.__cmd += sys.argv[1:]
+        self.__username = pwd.getpwuid(os.getuid())[0]
+        self.__platform = ' '.join(platform.uname()).strip()
+        self.__ptlversion = str(ptl.__version__)
+        self.__dbobj = {}
+        self.__index = 1
+
+    def __write_test_data(self, data):
+        if _TESTRESULT_TN not in self.__dbobj.keys():
+            self.__dbobj[_TESTRESULT_TN] = open(self.dbpath, 'w+')
+        d = {}
+        d['suite'] = data['suite']
+        d['testcase'] = data['testcase']
+        d['status'] = data['status']
+        d['status_data'] = data['status_data']
+        d['duration'] = str(data['duration'])
+        testdt = {"a":1,"b":2}
+        jreport = json.dumps(testdt, indent=4)
+        f = open('ptl_test_results.json', 'w+')
+        f.write(jreport)
+        f.close()
+        #self.__dbobj[_TESTRESULT_TN].seek(-27, os.SEEK_END)
+        #t = self.__dbobj[_TESTRESULT_TN].readline().strip()
+        #line = ''
+        #if t != '[':
+        #    line += ',\n'
+        #else:
+        #    line += '\n'
+        #line += str(d) + '\n];</script></body></html>'
+        #self.__dbobj[_TESTRESULT_TN].seek(-26, os.SEEK_END)
+        #self.__dbobj[_TESTRESULT_TN].write(line)
+        #self.__dbobj[_TESTRESULT_TN].flush()
+        #self.__index += 1
+
+    def write(self, data, logfile=None):
+        if len(data) == 0:
+            return
+        if 'testdata' in data.keys():
+            self.__write_test_data(data['testdata'])
+
+    def close(self):
+        for v in self.__dbobj.values():
+            v.write('\n')
+            v.flush()
+            v.close()
 
 class PTLTestDb(Plugin):
 
@@ -1601,6 +1664,7 @@ class PTLTestDb(Plugin):
         self.__dbaccess = None
         self.__dbmapping = {'file': FileDb,
                             'html': HTMLDb,
+                            'json': JSONDb,
                             'sqlite': SQLiteDb,
                             'pgsql': PostgreSQLDb}
 

@@ -100,7 +100,7 @@ def usage():
     msg += ['-t <test suites>: comma-separated list of test suites to run\n']
     msg += ['--exclude=<names>: comma-separated string of tests to exclude\n']
     msg += ['--db-type=<type>: Type of database to use.']
-    msg += [' can be one of "html", "file", "sqlite", "pgsql".']
+    msg += [' can be one of "html", "file", "sqlite", "pgsql", "json".']
     msg += [' Default to "file"\n']
     msg += ['--db-name=<name>: database name. Default to']
     msg += [' ptl_test_results.db\n']
