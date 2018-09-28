@@ -1607,21 +1607,14 @@ class JSONDb(DBType):
         self.__ptlversion = str(ptl.__version__)
         self.__dbobj = {}
         self.__index = 1
+        #self.dt = {}
+        #self.dt['testsuites'] = {}
 
     def __write_test_data(self, data):
         if _TESTRESULT_TN not in self.__dbobj.keys():
             self.__dbobj[_TESTRESULT_TN] = open(self.dbpath, 'w+')
-        d = {}
-        d['suite'] = data['suite']
-        d['testcase'] = data['testcase']
-        d['status'] = data['status']
-        d['status_data'] = data['status_data']
-        d['duration'] = str(data['duration'])
-        testdt = {"a":1,"b":2}
-        jreport = json.dumps(testdt, indent=4)
-        f = open('ptl_test_results.json', 'w+')
-        f.write(jreport)
-        f.close()
+
+        ############
         #self.__dbobj[_TESTRESULT_TN].seek(-27, os.SEEK_END)
         #t = self.__dbobj[_TESTRESULT_TN].readline().strip()
         #line = ''
@@ -1634,6 +1627,86 @@ class JSONDb(DBType):
         #self.__dbobj[_TESTRESULT_TN].write(line)
         #self.__dbobj[_TESTRESULT_TN].flush()
         #self.__index += 1
+        ############
+
+
+        #ts1 = data['suite']
+        #self.dt['testsuites'][ts1] = dict()
+        #self.dt['testsuites'][ts1].update({'testcases':{}})
+        #tc = data['testcase']
+        #print tc
+        #if tc not in self.dt['testsuites'][ts1]['testcases'].keys():
+        #    self.dt['testsuites'][ts1]['testcases'].update({tc:{}})
+        #    print '*************************************************'
+         #   print self.dt
+
+        #print __dt
+
+        ##########################################################
+        #SKH: Populating test results data
+        d = {}
+        d['command'] = ' '.join(self.__cmd)
+        d['user'] = self.__username
+        d['product_version'] = data['pbs_version']
+        #SKH: Value needed below
+        d['run_id'] = 0
+
+        #SKH: needs to be updated for multiple values
+        d['test_conf'] = {}
+        if data['testparam'] is not None:
+            for i in str(data['testparam']).split(','):
+                c = i.split('=')
+                d['test_conf'][c[0]] = c[1]
+
+        #SKH: Value to be constructed
+        d['machine_info'] = dict()
+        m1 = data['hostname']
+        d['machine_info'][m1] = dict()
+
+        d['testsuites'] = {}
+        ts1 = data['suite']
+        d['testsuites'][ts1] = dict()
+        #if data['suite'] not in d['testsuites'].keys():
+        #    d['testsuites'].update({data['suite']:{}})
+
+
+        d['testsuites'][ts1].update({'testcases':{}})
+        tcdic = {}
+        tc = data['testcase']
+        if tc not in d['testsuites'][ts1].keys():
+            d['testsuites'][ts1]['testcases'][tc] = {}
+
+        
+
+
+        d['status_data'] = data['status_data']
+        #d['duration'] = str(data['duration'])
+        d['test_summary'] = dict()
+        d['test_summary'] = {
+            'result_summary': {
+                'run': 0,
+                'succeeded': 0,
+                'failed': 0,
+                'errors': 0,
+                'skipped': 0,
+                'timedout': 0
+            },
+            'test_start_time': "",
+            'test_end_time': "",
+            'test_duration': "",
+            'tests_with_failures': "",
+            'test_suites_with_failures': ""
+        }
+
+        #d['platform'] = self.__platform
+        
+        print data
+        ##########################################################
+
+        jreport = json.dumps(d, indent=2)
+        f = open('ptl_test_results.json', 'w+')
+        f.write(jreport)
+        f.close()
 
     def write(self, data, logfile=None):
         if len(data) == 0:
