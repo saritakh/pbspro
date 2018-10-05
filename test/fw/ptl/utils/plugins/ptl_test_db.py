@@ -46,6 +46,7 @@ import time
 import json
 import ptl.utils.pbs_logutils as lu
 from ptl.lib.pbs_testlib import PbsTypeDuration
+from ptl.utils.plugins.ptl_test_tags import TAGKEY
 
 # Following dance require because PTLTestDb().process_output() from this file
 # is used in pbs_loganalyzer script which is shipped with PBS package
@@ -1649,7 +1650,7 @@ class JSONDb(DBType):
         d['user'] = self.__username
         d['product_version'] = data['pbs_version']
         #SKH: Value needed below
-        d['run_id'] = 0
+        d['run_id'] = int(time.time())
 
         #SKH: needs to be updated for multiple values
         d['test_conf'] = {}
@@ -1660,8 +1661,12 @@ class JSONDb(DBType):
 
         #SKH: Value to be constructed
         d['machine_info'] = dict()
+        mi = ['platform','os_info','pbs_install_type']
         m1 = data['hostname']
         d['machine_info'][m1] = dict()
+        d['machine_info'][m1]['platform'] = self.__platform
+        d['machine_info'][m1]['os_info'] = platform.system()
+        d['machine_info'][m1]['pbs_install_type'] = 'server'
 
         d['testsuites'] = {}
         ts1 = data['suite']
@@ -1669,14 +1674,24 @@ class JSONDb(DBType):
         #if data['suite'] not in d['testsuites'].keys():
         #    d['testsuites'].update({data['suite']:{}})
 
+        mtags = getattr(ts1, TAGKEY, None)
 
         d['testsuites'][ts1].update({'testcases':{}})
         tcdic = {}
         tc = data['testcase']
+        mtags1 = getattr(tc, TAGKEY, None)
         if tc not in d['testsuites'][ts1].keys():
             d['testsuites'][ts1]['testcases'][tc] = {}
-
-        
+            d['testsuites'][ts1]['testcases'][tc]['docstring'] = str(data['testdoc'].strip())
+            d['testsuites'][ts1]['testcases'][tc]['tags'] = mtags1
+            d['testsuites'][ts1]['testcases'][tc]['requirements'] = {}
+            d['testsuites'][ts1]['testcases'][tc]['results'] = {}
+            d['testsuites'][ts1]['testcases'][tc]['results']['status'] = ""
+            d['testsuites'][ts1]['testcases'][tc]['results']['status_data'] = ""
+	    d['testsuites'][ts1]['testcases'][tc]['results']['duration'] = ""
+            d['testsuites'][ts1]['testcases'][tc]['results']['start_time'] = ""
+            d['testsuites'][ts1]['testcases'][tc]['results']['end_time'] = ""
+            d['testsuites'][ts1]['testcases'][tc]['results']['measurements'] = []
 
 
         d['status_data'] = data['status_data']
