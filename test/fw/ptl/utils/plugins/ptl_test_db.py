@@ -1608,81 +1608,46 @@ class JSONDb(DBType):
         self.__ptlversion = str(ptl.__version__)
         self.__dbobj = {}
         self.__index = 1
-        #self.dt = {}
-        #self.dt['testsuites'] = {}
+        self.__jres = ""
 
     def __write_test_data(self, data):
-        #if _TESTRESULT_TN not in self.__dbobj.keys():
-        #    self.__dbobj[_TESTRESULT_TN] = open(self.dbpath, 'w+')
-
-        ############
-        #self.__dbobj[_TESTRESULT_TN].seek(-27, os.SEEK_END)
-        #t = self.__dbobj[_TESTRESULT_TN].readline().strip()
-        #line = ''
-        #if t != '[':
-        #    line += ',\n'
-        #else:
-        #    line += '\n'
-        #line += str(d) + '\n];</script></body></html>'
-        #self.__dbobj[_TESTRESULT_TN].seek(-26, os.SEEK_END)
-        #self.__dbobj[_TESTRESULT_TN].write(line)
-        #self.__dbobj[_TESTRESULT_TN].flush()
-        #self.__index += 1
-        ############
-
-
-        #ts1 = data['suite']
-        #self.dt['testsuites'][ts1] = dict()
-        #self.dt['testsuites'][ts1].update({'testcases':{}})
-        #tc = data['testcase']
-        #print tc
-        #if tc not in self.dt['testsuites'][ts1]['testcases'].keys():
-        #    self.dt['testsuites'][ts1]['testcases'].update({tc:{}})
-        #    print '*************************************************'
-         #   print self.dt
-
-        #print __dt
+        d = {}
+        if _TESTRESULT_TN not in self.__dbobj.keys():
+            self.__dbobj[_TESTRESULT_TN] = open(self.dbpath, 'w+')
+            d['command'] = ' '.join(self.__cmd)
+            d['user'] = self.__username
+            d['product_version'] = data['pbs_version']
+            d['run_id'] = int(time.time())
+            #SKH: needs to be updated for multiple values
+            d['test_conf'] = {}
+            if data['testparam'] is not None:
+                for i in str(data['testparam']).split(','):
+                    c = i.split('=')
+                    d['test_conf'][c[0]] = c[1]
+            #SKH: Value to be constructed for remote systems
+            d['machine_info'] = dict()
+            mi = ['platform','os_info','pbs_install_type']
+            m1 = data['hostname']
+            d['machine_info'][m1] = dict()
+            d['machine_info'][m1]['platform'] = self.__platform
+            d['machine_info'][m1]['os_info'] = platform.system()
+            d['machine_info'][m1]['pbs_install_type'] = 'server'
+            d['testsuites'] = {}
+        elif _TESTRESULT_TN in self.__dbobj.keys():
+            d = json.loads(self.__jres)
 
         ##########################################################
-        #SKH: Populating test results data
-        d = {}
-        d['command'] = ' '.join(self.__cmd)
-        d['user'] = self.__username
-        d['product_version'] = data['pbs_version']
-        d['run_id'] = int(time.time())
-
-        #SKH: needs to be updated for multiple values
-        d['test_conf'] = {}
-        if data['testparam'] is not None:
-            for i in str(data['testparam']).split(','):
-                c = i.split('=')
-                d['test_conf'][c[0]] = c[1]
-
-        #SKH: Value to be constructed for remote systems
-        d['machine_info'] = dict()
-        mi = ['platform','os_info','pbs_install_type']
-        m1 = data['hostname']
-        d['machine_info'][m1] = dict()
-        d['machine_info'][m1]['platform'] = self.__platform
-        d['machine_info'][m1]['os_info'] = platform.system()
-        d['machine_info'][m1]['pbs_install_type'] = 'server'
-
-        d['testsuites'] = {}
         ts1 = data['suite']
-        #d['testsuites'][ts1] = dict()
         if data['suite'] not in d['testsuites'].keys():
             d['testsuites'].update({data['suite']:{}})
-
-        mtags = getattr(ts1, TAGKEY, None)
-
-        if 'testcases' not in d['testsuites'][ts1].keys():
+            d['testsuites'][ts1]['docstring'] = ""
+            d['testsuites'][ts1]['module'] = ""
+            d['testsuites'][ts1]['file'] = ""
             d['testsuites'][ts1].update({'testcases':{}})
-        tcdic = {}
         tc = data['testcase']
-        mtags1 = getattr(tc, TAGKEY, None)
         d['testsuites'][ts1]['testcases'][tc] = {}
         d['testsuites'][ts1]['testcases'][tc]['docstring'] = str(data['testdoc'].strip())
-        d['testsuites'][ts1]['testcases'][tc]['tags'] = mtags1
+        d['testsuites'][ts1]['testcases'][tc]['tags'] = []
         d['testsuites'][ts1]['testcases'][tc]['requirements'] = {}
         d['testsuites'][ts1]['testcases'][tc]['results'] = {}
         d['testsuites'][ts1]['testcases'][tc]['results']['status'] = data['status']
@@ -1691,10 +1656,7 @@ class JSONDb(DBType):
         d['testsuites'][ts1]['testcases'][tc]['results']['start_time'] = str(data['start_time'])
         d['testsuites'][ts1]['testcases'][tc]['results']['end_time'] = str(data['end_time'])
         d['testsuites'][ts1]['testcases'][tc]['results']['measurements'] = []
-
-
         d['status_data'] = data['status_data']
-        #d['duration'] = str(data['duration'])
         d['test_summary'] = dict()
         d['test_summary'] = {
             'result_summary': {
@@ -1716,10 +1678,16 @@ class JSONDb(DBType):
         print data
         ##########################################################
 
-        jreport = json.dumps(d, indent=2)
-        f = open('ptl_test_results.json', 'w+')
-        f.write(jreport)
-        f.close()
+
+        #jreport = json.dumps(d, indent=2)
+        #f = open('ptl_test_results.json', 'w+')
+        #f.write(jreport)
+        #f.close()
+        #self.__dbobj[_TESTRESULT_TN].write(jreport)
+
+
+        self.__jres = json.dumps(d, indent=2)
+        #print self.__jres
 
     def write(self, data, logfile=None):
         if len(data) == 0:
@@ -1728,6 +1696,7 @@ class JSONDb(DBType):
             self.__write_test_data(data['testdata'])
 
     def close(self):
+        self.__dbobj[_TESTRESULT_TN].write(self.__jres)
         for v in self.__dbobj.values():
             v.write('\n')
             v.flush()
