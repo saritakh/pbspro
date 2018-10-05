@@ -1612,8 +1612,8 @@ class JSONDb(DBType):
         #self.dt['testsuites'] = {}
 
     def __write_test_data(self, data):
-        if _TESTRESULT_TN not in self.__dbobj.keys():
-            self.__dbobj[_TESTRESULT_TN] = open(self.dbpath, 'w+')
+        #if _TESTRESULT_TN not in self.__dbobj.keys():
+        #    self.__dbobj[_TESTRESULT_TN] = open(self.dbpath, 'w+')
 
         ############
         #self.__dbobj[_TESTRESULT_TN].seek(-27, os.SEEK_END)
@@ -1649,7 +1649,6 @@ class JSONDb(DBType):
         d['command'] = ' '.join(self.__cmd)
         d['user'] = self.__username
         d['product_version'] = data['pbs_version']
-        #SKH: Value needed below
         d['run_id'] = int(time.time())
 
         #SKH: needs to be updated for multiple values
@@ -1659,7 +1658,7 @@ class JSONDb(DBType):
                 c = i.split('=')
                 d['test_conf'][c[0]] = c[1]
 
-        #SKH: Value to be constructed
+        #SKH: Value to be constructed for remote systems
         d['machine_info'] = dict()
         mi = ['platform','os_info','pbs_install_type']
         m1 = data['hostname']
@@ -1670,28 +1669,28 @@ class JSONDb(DBType):
 
         d['testsuites'] = {}
         ts1 = data['suite']
-        d['testsuites'][ts1] = dict()
-        #if data['suite'] not in d['testsuites'].keys():
-        #    d['testsuites'].update({data['suite']:{}})
+        #d['testsuites'][ts1] = dict()
+        if data['suite'] not in d['testsuites'].keys():
+            d['testsuites'].update({data['suite']:{}})
 
         mtags = getattr(ts1, TAGKEY, None)
 
-        d['testsuites'][ts1].update({'testcases':{}})
+        if 'testcases' not in d['testsuites'][ts1].keys():
+            d['testsuites'][ts1].update({'testcases':{}})
         tcdic = {}
         tc = data['testcase']
         mtags1 = getattr(tc, TAGKEY, None)
-        if tc not in d['testsuites'][ts1].keys():
-            d['testsuites'][ts1]['testcases'][tc] = {}
-            d['testsuites'][ts1]['testcases'][tc]['docstring'] = str(data['testdoc'].strip())
-            d['testsuites'][ts1]['testcases'][tc]['tags'] = mtags1
-            d['testsuites'][ts1]['testcases'][tc]['requirements'] = {}
-            d['testsuites'][ts1]['testcases'][tc]['results'] = {}
-            d['testsuites'][ts1]['testcases'][tc]['results']['status'] = ""
-            d['testsuites'][ts1]['testcases'][tc]['results']['status_data'] = ""
-	    d['testsuites'][ts1]['testcases'][tc]['results']['duration'] = ""
-            d['testsuites'][ts1]['testcases'][tc]['results']['start_time'] = ""
-            d['testsuites'][ts1]['testcases'][tc]['results']['end_time'] = ""
-            d['testsuites'][ts1]['testcases'][tc]['results']['measurements'] = []
+        d['testsuites'][ts1]['testcases'][tc] = {}
+        d['testsuites'][ts1]['testcases'][tc]['docstring'] = str(data['testdoc'].strip())
+        d['testsuites'][ts1]['testcases'][tc]['tags'] = mtags1
+        d['testsuites'][ts1]['testcases'][tc]['requirements'] = {}
+        d['testsuites'][ts1]['testcases'][tc]['results'] = {}
+        d['testsuites'][ts1]['testcases'][tc]['results']['status'] = data['status']
+        d['testsuites'][ts1]['testcases'][tc]['results']['status_data'] = data['status_data']
+	d['testsuites'][ts1]['testcases'][tc]['results']['duration'] = str(data['duration'])
+        d['testsuites'][ts1]['testcases'][tc]['results']['start_time'] = str(data['start_time'])
+        d['testsuites'][ts1]['testcases'][tc]['results']['end_time'] = str(data['end_time'])
+        d['testsuites'][ts1]['testcases'][tc]['results']['measurements'] = []
 
 
         d['status_data'] = data['status_data']
@@ -1713,7 +1712,6 @@ class JSONDb(DBType):
             'test_suites_with_failures': ""
         }
 
-        #d['platform'] = self.__platform
         
         print data
         ##########################################################
