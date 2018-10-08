@@ -1608,23 +1608,22 @@ class JSONDb(DBType):
         self.__ptlversion = str(ptl.__version__)
         self.__dbobj = {}
         self.__index = 1
-        self.__jres = ""
+        self.__jres = {}
 
     def __write_test_data(self, data):
         d = {}
         if _TESTRESULT_TN not in self.__dbobj.keys():
             self.__dbobj[_TESTRESULT_TN] = open(self.dbpath, 'w+')
+            print "SKH Inside if1"
             d['command'] = ' '.join(self.__cmd)
             d['user'] = self.__username
             d['product_version'] = data['pbs_version']
             d['run_id'] = int(time.time())
-            #SKH: needs to be updated for multiple values
             d['test_conf'] = {}
             if data['testparam'] is not None:
                 for i in str(data['testparam']).split(','):
                     c = i.split('=')
                     d['test_conf'][c[0]] = c[1]
-            #SKH: Value to be constructed for remote systems
             d['machine_info'] = dict()
             mi = ['platform','os_info','pbs_install_type']
             m1 = data['hostname']
@@ -1633,20 +1632,31 @@ class JSONDb(DBType):
             d['machine_info'][m1]['os_info'] = platform.system()
             d['machine_info'][m1]['pbs_install_type'] = 'server'
             d['testsuites'] = {}
-        elif _TESTRESULT_TN in self.__dbobj.keys():
+            d['test_summary'] = {}
+            d['test_summary'].update({'result_summary':{}})
+            d['test_start_time'] = str(data['start_time'])
+            print "SKH Inside if2"
+        else:
+            #if len(self.__jres) > 0:
+            #    d = json.loads(self.__jres)
             d = json.loads(self.__jres)
+            print "SKH Inside else1"
 
         ##########################################################
         ts1 = data['suite']
         if data['suite'] not in d['testsuites'].keys():
             d['testsuites'].update({data['suite']:{}})
-            d['testsuites'][ts1]['docstring'] = ""
-            d['testsuites'][ts1]['module'] = ""
-            d['testsuites'][ts1]['file'] = ""
+            d['testsuites'][ts1]['docstring'] = str(data['suitedoc'])
+            d['testsuites'][ts1]['module'] = data['module']
+            d['testsuites'][ts1]['file'] = data['file']
             d['testsuites'][ts1].update({'testcases':{}})
         tc = data['testcase']
         d['testsuites'][ts1]['testcases'][tc] = {}
-        d['testsuites'][ts1]['testcases'][tc]['docstring'] = str(data['testdoc'].strip())
+        doc = []
+        for l in str(data['testdoc']).strip().split('\n'):
+            doc.append(l.strip().replace('\t', ' ').replace('\'', '\'\''))
+        doc = ' '.join(doc)
+        d['testsuites'][ts1]['testcases'][tc]['docstring'] = str(doc)
         d['testsuites'][ts1]['testcases'][tc]['tags'] = []
         d['testsuites'][ts1]['testcases'][tc]['requirements'] = {}
         d['testsuites'][ts1]['testcases'][tc]['results'] = {}
@@ -1657,25 +1667,25 @@ class JSONDb(DBType):
         d['testsuites'][ts1]['testcases'][tc]['results']['end_time'] = str(data['end_time'])
         d['testsuites'][ts1]['testcases'][tc]['results']['measurements'] = []
         d['status_data'] = data['status_data']
-        d['test_summary'] = dict()
-        d['test_summary'] = {
-            'result_summary': {
-                'run': 0,
-                'succeeded': 0,
-                'failed': 0,
-                'errors': 0,
-                'skipped': 0,
-                'timedout': 0
-            },
-            'test_start_time': "",
-            'test_end_time': "",
-            'test_duration': "",
-            'tests_with_failures': "",
-            'test_suites_with_failures': ""
+        #d['test_summary'] = dict()
+        d['test_summary']['result_summary']= {
+            'run': 0,
+            'succeeded': 0,
+            'failed': 0,
+            'errors': 0,
+            'skipped': 0,
+            'timedout': 0
         }
-
+        #    'test_start_time': "",
+        #    'test_end_time': "",
+        #    'test_duration': "",
+        #    'tests_with_failures': "",
+        #    'test_suites_with_failures': ""
+        d['test_summary']['result_summary']['test_end_time'] = str(data['end_time'])
         
-        print data
+
+        print "****************"
+        #print data
         ##########################################################
 
 
@@ -1692,6 +1702,8 @@ class JSONDb(DBType):
     def write(self, data, logfile=None):
         if len(data) == 0:
             return
+        print "SKH data details"
+        print data
         if 'testdata' in data.keys():
             self.__write_test_data(data['testdata'])
 
@@ -1779,6 +1791,9 @@ class PTLTestDb(Plugin):
             testdata['hostname'] = 'unknown'
         testdata['testparam'] = getattr(_test, 'param', None)
         testdata['suite'] = sn
+        testdata['suitedoc'] = str(_test.__class__.__doc__)
+        testdata['file'] = _test.__module__.replace('.','/') + '.py'
+        testdata['module'] = _test.__module__
         testdata['testcase'] = getattr(_test, '_testMethodName', '<unknown>')
         testdata['testdoc'] = getattr(_test, '_testMethodDoc', '<unknown>')
         testdata['start_time'] = getattr(test, 'start_time', 0)
