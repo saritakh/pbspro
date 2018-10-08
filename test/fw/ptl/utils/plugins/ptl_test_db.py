@@ -1657,12 +1657,12 @@ class JSONDb(DBType):
             doc.append(l.strip().replace('\t', ' ').replace('\'', '\'\''))
         doc = ' '.join(doc)
         d['testsuites'][ts1]['testcases'][tc]['docstring'] = str(doc)
-        d['testsuites'][ts1]['testcases'][tc]['tags'] = []
+        d['testsuites'][ts1]['testcases'][tc]['tags'] = data['tags']
         d['testsuites'][ts1]['testcases'][tc]['requirements'] = {}
         d['testsuites'][ts1]['testcases'][tc]['results'] = {}
         d['testsuites'][ts1]['testcases'][tc]['results']['status'] = data['status']
         d['testsuites'][ts1]['testcases'][tc]['results']['status_data'] = data['status_data']
-	d['testsuites'][ts1]['testcases'][tc]['results']['duration'] = str(data['duration'])
+        d['testsuites'][ts1]['testcases'][tc]['results']['duration'] = str(data['duration'])
         d['testsuites'][ts1]['testcases'][tc]['results']['start_time'] = str(data['start_time'])
         d['testsuites'][ts1]['testcases'][tc]['results']['end_time'] = str(data['end_time'])
         d['testsuites'][ts1]['testcases'][tc]['results']['measurements'] = []
@@ -1799,6 +1799,7 @@ class PTLTestDb(Plugin):
         testdata['start_time'] = getattr(test, 'start_time', 0)
         testdata['end_time'] = getattr(test, 'end_time', 0)
         testdata['duration'] = getattr(test, 'duration', 0)
+        testdata['tags'] = getattr(test, TAGKEY, [])
         if err is not None:
             if isclass(err[0]) and issubclass(err[0], SkipTest):
                 testdata['status'] = 'SKIP'
