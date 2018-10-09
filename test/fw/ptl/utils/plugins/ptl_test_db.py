@@ -1684,16 +1684,16 @@ class JSONDb(DBType):
         d['testsuites'][ts1]['testcases'][tc]['results']['duration'] = str(data['duration'])
         d['testsuites'][ts1]['testcases'][tc]['results']['start_time'] = str(data['start_time'])
         d['testsuites'][ts1]['testcases'][tc]['results']['end_time'] = str(data['end_time'])
-        print "########################################"
-        print data
-        print "########################################"
-        d['testsuites'][ts1]['testcases'][tc]['results']['measurements'] = [{}]
+        d['testsuites'][ts1]['testcases'][tc]['results']['measurements'] = []
         if 'measurements' in data.keys():
-            print data['measurements']
+            #print data['measurements']
             d['testsuites'][ts1]['testcases'][tc]['results']['measurements'].append(data['measurements'])
-        #lm = len(data['measurements'])
-        #if lm > 0:
-        #    d['testsuites'][ts1]['testcases'][tc]['results']['measurements'].append(data['measurements'])
+
+        d['additional_data'] = {}
+        if 'additional_data' in data.keys():
+            print data['additional_data']
+            d['additional_data'] = data['additional_data']
+
         d['test_summary']['test_end_time'] = str(data['end_time'])
         #d['test_summary']['test_duration'] = str(data['end_time'] - d['test_summary']['test_start_time'])
         
@@ -1829,6 +1829,9 @@ class PTLTestDb(Plugin):
         med = getattr(_test, 'measurements', {})
         if len(med) > 0:
             testdata['measurements'] = med
+        madd = getattr(_test, 'additional_data', {})
+        if len(madd) > 0:
+            testdata['additional_data'] = madd
         if err is not None:
             if isclass(err[0]) and issubclass(err[0], SkipTest):
                 testdata['status'] = 'SKIP'
