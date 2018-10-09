@@ -1634,7 +1634,18 @@ class JSONDb(DBType):
             d['testsuites'] = {}
             d['test_summary'] = {}
             d['test_summary'].update({'result_summary':{}})
-            d['test_start_time'] = str(data['start_time'])
+            d['test_summary']['test_start_time'] = str(data['start_time'])
+            d['test_summary']['result_summary'] = {
+                'run': 0,
+                'succeeded': 0,
+                'failed': 0,
+                'errors': 0,
+                'skipped': 0,
+                'timedout': 0
+            }
+            d['test_summary']['tests_with_failures'] = []
+            d['test_summary']['test_suites_with_failures'] = []
+            d['additional_data'] = {}
             print "SKH Inside if2"
         else:
             #if len(self.__jres) > 0:
@@ -1646,7 +1657,11 @@ class JSONDb(DBType):
         ts1 = data['suite']
         if data['suite'] not in d['testsuites'].keys():
             d['testsuites'].update({data['suite']:{}})
-            d['testsuites'][ts1]['docstring'] = str(data['suitedoc'])
+            sdoc = []
+            for l in str(data['suitedoc']).strip().split('\n'):
+                sdoc.append(l.strip().replace('\t', ' ').replace('\'', '\'\''))
+            sdoc = ' '.join(sdoc)
+            d['testsuites'][ts1]['docstring'] = str(sdoc)
             d['testsuites'][ts1]['module'] = data['module']
             d['testsuites'][ts1]['file'] = data['file']
             d['testsuites'][ts1].update({'testcases':{}})
@@ -1661,40 +1676,51 @@ class JSONDb(DBType):
         d['testsuites'][ts1]['testcases'][tc]['requirements'] = {}
         d['testsuites'][ts1]['testcases'][tc]['results'] = {}
         d['testsuites'][ts1]['testcases'][tc]['results']['status'] = data['status']
-        d['testsuites'][ts1]['testcases'][tc]['results']['status_data'] = data['status_data']
+        sdata = []
+        for l in str(data['status_data']).strip().split('\n'):
+            sdata.append(l.strip().replace('\t', ' ').replace('\'', '\'\''))
+        sdata = ' '.join(sdata)
+        d['testsuites'][ts1]['testcases'][tc]['results']['status_data'] = str(sdata)
         d['testsuites'][ts1]['testcases'][tc]['results']['duration'] = str(data['duration'])
         d['testsuites'][ts1]['testcases'][tc]['results']['start_time'] = str(data['start_time'])
         d['testsuites'][ts1]['testcases'][tc]['results']['end_time'] = str(data['end_time'])
-        d['testsuites'][ts1]['testcases'][tc]['results']['measurements'] = []
-        d['status_data'] = data['status_data']
-        #d['test_summary'] = dict()
-        d['test_summary']['result_summary']= {
-            'run': 0,
-            'succeeded': 0,
-            'failed': 0,
-            'errors': 0,
-            'skipped': 0,
-            'timedout': 0
-        }
-        #    'test_start_time': "",
-        #    'test_end_time': "",
-        #    'test_duration': "",
-        #    'tests_with_failures': "",
-        #    'test_suites_with_failures': ""
-        d['test_summary']['result_summary']['test_end_time'] = str(data['end_time'])
+        print "########################################"
+        print data
+        print "########################################"
+        d['testsuites'][ts1]['testcases'][tc]['results']['measurements'] = [{}]
+        if 'measurements' in data.keys():
+            print data['measurements']
+            d['testsuites'][ts1]['testcases'][tc]['results']['measurements'].append(data['measurements'])
+        #lm = len(data['measurements'])
+        #if lm > 0:
+        #    d['testsuites'][ts1]['testcases'][tc]['results']['measurements'].append(data['measurements'])
+        d['test_summary']['test_end_time'] = str(data['end_time'])
+        #d['test_summary']['test_duration'] = str(data['end_time'] - d['test_summary']['test_start_time'])
+        
+        d['test_summary']['result_summary']['run'] += 1
+        if data['status'] == 'PASS':
+            d['test_summary']['result_summary']['succeeded'] += 1
+        elif data['status'] == 'SKIP':
+            d['test_summary']['result_summary']['skipped'] += 1
+        elif data['status'] == 'TIMEDOUT':
+            d['test_summary']['result_summary']['timedout'] += 1
+        elif data['status'] == 'ERROR':
+            d['test_summary']['result_summary']['errors'] += 1
+            d['test_summary']['tests_with_failures'].append(data['testcase'])
+            if data['suite'] not in d['test_summary']['test_suites_with_failures']:
+                d['test_summary']['test_suites_with_failures'].append(data['suite'])
+        elif data['status'] == 'FAIL':
+            d['test_summary']['result_summary']['failed'] += 1
+            d['test_summary']['tests_with_failures'].append(data['testcase'])
+            if data['suite'] not in d['test_summary']['test_suites_with_failures']:
+                d['test_summary']['test_suites_with_failures'].append(data['suite'])
+        
         
 
         print "****************"
         #print data
-        ##########################################################
-
-
         #jreport = json.dumps(d, indent=2)
-        #f = open('ptl_test_results.json', 'w+')
-        #f.write(jreport)
-        #f.close()
         #self.__dbobj[_TESTRESULT_TN].write(jreport)
-
 
         self.__jres = json.dumps(d, indent=2)
         #print self.__jres
@@ -1800,6 +1826,9 @@ class PTLTestDb(Plugin):
         testdata['end_time'] = getattr(test, 'end_time', 0)
         testdata['duration'] = getattr(test, 'duration', 0)
         testdata['tags'] = getattr(test, TAGKEY, [])
+        med = getattr(_test, 'measurements', {})
+        if len(med) > 0:
+            testdata['measurements'] = med
         if err is not None:
             if isclass(err[0]) and issubclass(err[0], SkipTest):
                 testdata['status'] = 'SKIP'

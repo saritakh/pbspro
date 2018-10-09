@@ -394,6 +394,8 @@ class PBSTestSuite(unittest.TestCase):
 
     logger = logging.getLogger(__name__)
     metrics_data = {}
+    measurements = {}
+    additional_data = {}
     conf = {}
     param = None
     du = DshUtils()
@@ -997,6 +999,23 @@ class PBSTestSuite(unittest.TestCase):
                                              acctlog=self.server.acctlogfile,
                                              start=self.server.ctime,
                                              end=int(time.time()))
+
+    def set_test_measurements(self, mdic={}):
+        """
+        set dictionary of analytical results of the test
+        """
+        self.measurements = dict(mdic)
+        print mdic
+
+    def add_additional_data_to_report(self, datadic={}):
+        """
+        set dictionary that will be merged with the test report
+        for the overall test run
+        """
+        self.additional_data = {
+            'adata1': 'adataval1',
+            'adata2': 'adataval2'
+        }
 
     def start_proc_monitor(self, name=None, regexp=False, frequency=60):
         """
