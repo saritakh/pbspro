@@ -47,6 +47,7 @@ import json
 import ptl.utils.pbs_logutils as lu
 from ptl.lib.pbs_testlib import PbsTypeDuration
 from ptl.utils.plugins.ptl_test_tags import TAGKEY
+from ptl.utils.pbs_dshutils import DshUtils
 
 # Following dance require because PTLTestDb().process_output() from this file
 # is used in pbs_loganalyzer script which is shipped with PBS package
@@ -1609,6 +1610,7 @@ class JSONDb(DBType):
         self.__dbobj = {}
         self.__index = 1
         self.__jres = {}
+        self.du = DshUtils()
 
     def __write_test_data(self, data):
         d = {}
@@ -1624,13 +1626,15 @@ class JSONDb(DBType):
                 for i in str(data['testparam']).split(','):
                     c = i.split('=')
                     d['test_conf'][c[0]] = c[1]
+
             d['machine_info'] = dict()
-            mi = ['platform','os_info','pbs_install_type']
+
             m1 = data['hostname']
             d['machine_info'][m1] = dict()
-            d['machine_info'][m1]['platform'] = self.__platform
-            d['machine_info'][m1]['os_info'] = platform.system()
+            d['machine_info'][m1]['platform'] = self.du.get_platform_uname(hostname=m1)
+            d['machine_info'][m1]['os_info'] = self.du.get_os_info(hostname=m1)
             d['machine_info'][m1]['pbs_install_type'] = 'server'
+
             d['testsuites'] = {}
             d['test_summary'] = {}
             d['test_summary'].update({'result_summary':{}})
@@ -1812,6 +1816,10 @@ class PTLTestDb(Plugin):
                 (getattr(_test, 'server', None) is not None)):
             testdata['pbs_version'] = _test.server.attributes['pbs_version']
             testdata['hostname'] = _test.server.hostname
+        if (hasattr(_test, 'mom') and
+                (getattr(_test, 'mom', None) is not None)):
+            if _test.mom.hostname != testdata['hostname']:
+                testdata['mom_hostname'] = str(_test.mom.hostname)
         else:
             testdata['pbs_version'] = 'unknown'
             testdata['hostname'] = 'unknown'

@@ -111,6 +111,7 @@ class DshUtils(object):
     logger = logging.getLogger(__name__)
     _h2osinfo = {}  # host to OS info cache
     _h2p = {}  # host to platform cache
+    _h2pu = {}  # host to platform cache
     _h2c = {}  # host to pbs_conf file cache
     _h2l = {}  # host to islocal cache
     _h2which = {}  # host to which cache
@@ -167,7 +168,7 @@ class DshUtils(object):
         For efficiency the value is cached and retrieved from the
         cache upon subsequent request
         """
-        platform = sys.platform
+        splatform = sys.platform
         found_already = False
         if hostname is None:
             hostname = socket.gethostname()
@@ -177,9 +178,9 @@ class DshUtils(object):
                        level=logging.DEBUG2):
             if self.isfile(hostname=hostname, path='/proc/cray_xt/cname',
                            level=logging.DEBUG2):
-                platform = 'cray'
+                splatform = 'cray'
             else:
-                platform = 'craysim'
+                splatform = 'craysim'
             found_already = True
         if not self.is_localhost(hostname) and not found_already:
             if pyexec is None:
@@ -190,11 +191,44 @@ class DshUtils(object):
                 _msg = 'Unable to retrieve platform info,'
                 _msg += 'defaulting to local platform'
                 self.logger.warning(_msg)
-                platform = sys.platform
+                splatform = sys.platform
             else:
-                platform = ret['out'][0]
-        self._h2p[hostname] = platform
-        return platform
+                splatform = ret['out'][0]
+        self._h2p[hostname] = splatform
+        return splatform
+
+    def get_platform_uname(self, hostname=None, pyexec=None):
+        """
+        Get a local or remote platform info in uname format, essentially
+        the value of Python's platform.uname
+
+        :param hostname: The hostname to query for platform info
+        :type hostname: str or None
+        :param pyexec: A path to a Python interpreter to use to query
+                       a remote host for platform info
+        :type pyexec: str or None
+        For efficiency the value is cached and retrieved from the
+        cache upon subsequent request
+        """
+        uplatform = str(' '.join(platform.uname()).strip())
+        if hostname is None:
+            hostname = socket.gethostname()
+        if hostname in self._h2pu:
+            return self._h2pu[hostname]
+        if not self.is_localhost(hostname):
+            if pyexec is None:
+                pyexec = self.which(hostname, 'python', level=logging.DEBUG2)
+            cmd = [pyexec, '-c', '"import platform; print ' '.join(platform.uname()).strip()"']
+            ret = self.run_cmd(hostname, cmd=cmd)
+            if ret['rc'] != 0 or len(ret['out']) == 0:
+                _msg = 'Unable to retrieve platform info,'
+                _msg += 'defaulting to local platform'
+                self.logger.warning(_msg)
+                uplatform = platform.uname
+            else:
+                uplatform = ret['out'][0]
+        self._h2pu[hostname] = uplatform
+        return uplatform
 
     def get_os_info(self, hostname=None, pyexec=None):
         """
@@ -950,6 +984,22 @@ class DshUtils(object):
             else:
                 (o, e) = p.communicate(input)
                 ret['rc'] = p.returncode
+
+                # Platform specific handling:
+                # default HP-UX 11.31b config is to emit a special
+                # message to stderr (Last successful login ... Last
+                # authentication failure...) for every sudo operation,
+                # we ignore those messages in the error message
+                if sys.platform == 'hp-ux11':
+                    if e.startswith('Last successful login'):
+                        tmp_e = e.splitlines()
+                        if len(tmp_e) > 0:
+                            del tmp_e[0]
+                        if ((len(tmp_e) > 0) and
+                                (tmp_e[0].
+                                 startswith('Last authentication'))):
+                            del tmp_e[0]
+                        e = "\n".join(tmp_e)
 
             if as_script:
                 # must pass as_script=False otherwise it will loop infinite
@@ -1771,6 +1821,8 @@ class DshUtils(object):
             cmd += ['-m']
         if home_dir is not None:
             cmd += ['-d', home_dir]
+        elif ((self.platform.startswith('sunos')) and create_home_dir):
+            cmd += ['-d', os.path.join('/export', 'home', str(name))]
         if ((groups is not None) and (len(groups) > 0)):
             cmd += ['-G', ','.join(map(lambda g: str(g), groups))]
         cmd += [str(name)]
@@ -1791,7 +1843,8 @@ class DshUtils(object):
         cmd = ['userdel']
         if del_home:
             cmd += ['-r']
-        if force:
+        if force and (not (self.platform.startswith('sunos') or
+                           self.platform.startswith('aix'))):
             cmd += ['-f']
         cmd += [str(name)]
         self.logger.info('deleting user ' + str(name))
