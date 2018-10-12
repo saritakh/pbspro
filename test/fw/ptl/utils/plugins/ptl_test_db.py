@@ -48,7 +48,7 @@ import ptl.utils.pbs_logutils as lu
 from ptl.lib.pbs_testlib import PbsTypeDuration
 from ptl.utils.plugins.ptl_test_tags import TAGKEY
 from ptl.utils.pbs_dshutils import DshUtils
-import datetime
+from datetime import datetime
 
 # Following dance require because PTLTestDb().process_output() from this file
 # is used in pbs_loganalyzer script which is shipped with PBS package
@@ -1631,7 +1631,6 @@ class JSONDb(DBType):
             d['test_summary'] = {}
             d['test_summary'].update({'result_summary':{}})
             d['test_summary']['test_start_time'] = str(data['start_time'])
-            #self.__suite_start_time = data['start_time']
             d['test_summary']['result_summary'] = {
                 'run': 0,
                 'succeeded': 0,
@@ -1671,11 +1670,7 @@ class JSONDb(DBType):
         d['testsuites'][ts1]['testcases'][tc]['requirements'] = {}
         d['testsuites'][ts1]['testcases'][tc]['results'] = {}
         d['testsuites'][ts1]['testcases'][tc]['results']['status'] = data['status']
-        sdata = []
-        for l in str(data['status_data']).strip().split('\n'):
-            sdata.append(l.strip().replace('\t', ' ').replace('\'', '\'\''))
-        sdata = ' '.join(sdata)
-        d['testsuites'][ts1]['testcases'][tc]['results']['status_data'] = str(sdata)
+        d['testsuites'][ts1]['testcases'][tc]['results']['status_data'] = str(data['status_data'])
         d['testsuites'][ts1]['testcases'][tc]['results']['duration'] = str(data['duration'])
         d['testsuites'][ts1]['testcases'][tc]['results']['start_time'] = str(data['start_time'])
         d['testsuites'][ts1]['testcases'][tc]['results']['end_time'] = str(data['end_time'])
@@ -1689,13 +1684,6 @@ class JSONDb(DBType):
         d['test_summary']['test_end_time'] = str(data['end_time'])
         #d['test_summary']['test_duration'] = str(data['end_time'] - d['test_summary']['test_start_time'])
         dur = data['end_time'] - data['start_time']
-        print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
-        print dur
-        #dur1 = data['end_time'] - self.__suite_start_time
-        #self.__sduration += data['duration']
-        print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
-        #print self.__sduration
-        print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
         
         d['test_summary']['result_summary']['run'] += 1
         if data['status'] == 'PASS':
@@ -1715,7 +1703,7 @@ class JSONDb(DBType):
             if data['suite'] not in d['test_summary']['test_suites_with_failures']:
                 d['test_summary']['test_suites_with_failures'].append(data['suite'])
 
-        print "****************"
+        #print "****************"
         #jreport = json.dumps(d, indent=2)
         #self.__dbobj[_TESTRESULT_TN].write(jreport)
 
@@ -1730,6 +1718,7 @@ class JSONDb(DBType):
             self.__write_test_data(data['testdata'])
 
     def close(self):
+        #dt = json.loads(self.__jres)
         self.__dbobj[_TESTRESULT_TN].write(self.__jres)
         for v in self.__dbobj.values():
             v.write('\n')
@@ -1806,17 +1795,6 @@ class PTLTestDb(Plugin):
         testdata = {}
         data = {}
 
-        hostlist = {}
-        if hasattr(_test, 'servers'):
-            print "SKH--------------------------------SKH"
-            for s in _test.servers:
-                print _test.servers.values()
-                print _test.servers.values()[0]
-                #print str(_test.servers.values()[0]).split(' ')
-                #print (str(_test.servers.values()[0]).split(' '))[1]
-                #print (str(_test.schedulers.values()[0]).split(' '))[1]
-                #print _test.schedulers.values()[0]
-            print (str(_test.servers.values()[0]).split(' '))[1]
         if (hasattr(_test, 'server') and
                 (getattr(_test, 'server', None) is not None)):
             testdata['pbs_version'] = _test.server.attributes['pbs_version']
@@ -1830,46 +1808,36 @@ class PTLTestDb(Plugin):
             testdata['hostname'] = 'unknown'
 
         minfo = {}
-        m2info = {}
-        minfo = {
+        mpinfo = {
             'servers': [],
             'schedulers': [],
             'comms': [],
             'moms': [],
             'clients': []
         }
-        server_hostname = _test.server.hostname
-        minfo['servers'].append(server_hostname)
-        if _test.scheduler.hostname != _test.server.hostname:
-            sched_hostname = _test.scheduler.hostname
-            minfo['schedulers'].append(sched_hostname)
-        if _test.comm.hostname != _test.comm.hostname:
-            comm_hostname = _test.comm.hostname
-            minfo['comms'].append(sched_hostname)
-        if _test.mom.hostname != _test.server.hostname:
-            mom_hostname = _test.mom.hostname
-            minfo['moms'].append(sched_hostname)
-        if _test.server.client is not None:
-            minfo['clients'].append(_test.server.client)
 
-        for h in minfo.keys():
-            for h1 in minfo[h]:
-                if h1 not in m2info.keys():
-                    m2info[h1] = {}
-                    m2info[h1]['platform'] = self.__du.get_platform_uname(hostname=h1)
-                    m2info[h1]['os_info'] = self.__du.get_os_info(hostname=h1)
-                if h1 in minfo['servers']:
-                    m2info[h1]['pbs_install_type'] = 'server'
-                elif (h1 in minfo['moms'] and h1 not in minfo['servers']):
-                    m2info[h1]['pbs_install_type'] = 'execution'
-                elif (h1 in minfo['comms'] and h1 not in minfo['servers']):
-                    m2info[h1]['pbs_install_type'] = 'communication'
-                elif h1 in minfo['clients']:
-                    m2info[h1]['pbs_install_type'] = 'client'
+        mpinfo['servers'] = _test.servers.host_keys()
+        mpinfo['moms'] = _test.moms.host_keys()
+        mpinfo['comms'] = _test.comms.host_keys()
+
+        for h in mpinfo.keys():
+            for h1 in mpinfo[h]:
+                if h1 not in minfo.keys():
+                    minfo[h1] = {}
+                    minfo[h1]['platform'] = self.__du.get_platform_uname(hostname=h1)
+                    minfo[h1]['os_info'] = self.__du.get_os_info(hostname=h1)
+                if h1 in mpinfo['servers']:
+                    minfo[h1]['pbs_install_type'] = 'server'
+                elif (h1 in mpinfo['moms'] and h1 not in mpinfo['servers']):
+                    minfo[h1]['pbs_install_type'] = 'execution'
+                elif (h1 in mpinfo['comms'] and h1 not in mpinfo['servers']):
+                    minfo[h1]['pbs_install_type'] = 'communication'
+                elif h1 in mpinfo['clients']:
+                    minfo[h1]['pbs_install_type'] = 'client'
                 else:
-                    m2info[h1]['pbs_install_type'] = 'null'
+                    minfo[h1]['pbs_install_type'] = 'null'
 
-        testdata['machinfo'] = m2info
+        testdata['machinfo'] = minfo
         testdata['testparam'] = getattr(_test, 'param', None)
         testdata['suite'] = sn
         testdata['suitedoc'] = str(_test.__class__.__doc__)
@@ -1880,7 +1848,7 @@ class PTLTestDb(Plugin):
         testdata['start_time'] = getattr(test, 'start_time', 0)
         testdata['end_time'] = getattr(test, 'end_time', 0)
         testdata['duration'] = getattr(test, 'duration', 0)
-        testdata['tags'] = getattr(test, TAGKEY, [])
+        testdata['tags'] = getattr(_test, TAGKEY, [])
         med = getattr(_test, 'measurements', {})
         if len(med) > 0:
             testdata['measurements'] = med
@@ -1916,6 +1884,9 @@ class PTLTestDb(Plugin):
         self.__dbconn.write(self.__create_data(test, None, 'PASS'))
 
     def finalize(self, result):
+        if hasattr(result,'runduration'):
+            tt = getattr(result, 'runduration', 'datetime') 
+            print tt
         self.__dbconn.close()
         self.__dbconn = None
         self.__dbaccess = None

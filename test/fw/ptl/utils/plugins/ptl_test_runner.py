@@ -119,6 +119,7 @@ class _PtlTestResult(unittest.TestResult):
         self.skipped = []
         self.timedout = []
         self.handler = TestLogCaptureHandler()
+        self.runduration = datetime.datetime.now()
 
     def getDescription(self, test):
         """
@@ -400,7 +401,8 @@ class _PtlTestResult(unittest.TestResult):
         _msg += ', skipped: ' + str(skip)
         _msg += ', timedout: ' + str(timedout)
         msg += [_msg]
-        msg += ['Tests run in ' + str(stop - start)]
+        self.runduration = stop - start
+        msg += ['Tests run in ' + str(self.runduration)]
         self.logger.info('\n'.join(msg))
 
 
