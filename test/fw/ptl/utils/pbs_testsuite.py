@@ -394,7 +394,7 @@ class PBSTestSuite(unittest.TestCase):
 
     logger = logging.getLogger(__name__)
     metrics_data = {}
-    measurements = {}
+    measurements = []
     additional_data = {}
     conf = {}
     param = None
@@ -445,7 +445,7 @@ class PBSTestSuite(unittest.TestCase):
         self.revert_schedulers()
         self.revert_moms()
         self.log_end_setup()
-        self.measurements = {}
+        self.measurements = []
 
     @classmethod
     def log_enter_setup(cls, iscls=False):
@@ -1006,7 +1006,7 @@ class PBSTestSuite(unittest.TestCase):
         set dictionary of analytical results of the test
         """
         if len(mdic) > 0:
-            self.measurements.update(dict(mdic))
+            self.measurements.append(dict(mdic))
 
     def add_additional_data_to_report(self, datadic={}):
         """
