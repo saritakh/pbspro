@@ -1587,6 +1587,7 @@ class HTMLDb(DBType):
             v.flush()
             v.close()
 
+
 class JSONDb(DBType):
 
     """
@@ -1629,7 +1630,7 @@ class JSONDb(DBType):
             d['machine_info'] = data['machinfo']
             d['testsuites'] = {}
             d['test_summary'] = {}
-            d['test_summary'].update({'result_summary':{}})
+            d['test_summary'].update({'result_summary': {}})
             d['test_summary']['test_start_time'] = str(data['start_time'])
             d['test_summary']['result_summary'] = {
                 'run': 0,
@@ -1650,7 +1651,7 @@ class JSONDb(DBType):
         ##########################################################
         ts1 = data['suite']
         if data['suite'] not in d['testsuites'].keys():
-            d['testsuites'].update({data['suite']:{}})
+            d['testsuites'].update({data['suite']: {}})
             sdoc = []
             for l in str(data['suitedoc']).strip().split('\n'):
                 sdoc.append(l.strip().replace('\t', ' ').replace('\'', '\'\''))
@@ -1658,33 +1659,30 @@ class JSONDb(DBType):
             d['testsuites'][ts1]['docstring'] = str(sdoc)
             d['testsuites'][ts1]['module'] = data['module']
             d['testsuites'][ts1]['file'] = data['file']
-            d['testsuites'][ts1].update({'testcases':{}})
+            d['testsuites'][ts1].update({'testcases': {}})
         tc = data['testcase']
         d['testsuites'][ts1]['testcases'][tc] = {}
         doc = []
         for l in str(data['testdoc']).strip().split('\n'):
             doc.append(l.strip().replace('\t', ' ').replace('\'', '\'\''))
         doc = ' '.join(doc)
-        d['testsuites'][ts1]['testcases'][tc]['docstring'] = str(doc)
-        d['testsuites'][ts1]['testcases'][tc]['tags'] = data['tags']
-        d['testsuites'][ts1]['testcases'][tc]['requirements'] = {}
-        d['testsuites'][ts1]['testcases'][tc]['results'] = {}
-        d['testsuites'][ts1]['testcases'][tc]['results']['status'] = data['status']
-        d['testsuites'][ts1]['testcases'][tc]['results']['status_data'] = str(data['status_data'])
-        d['testsuites'][ts1]['testcases'][tc]['results']['duration'] = str(data['duration'])
-        d['testsuites'][ts1]['testcases'][tc]['results']['start_time'] = str(data['start_time'])
-        d['testsuites'][ts1]['testcases'][tc]['results']['end_time'] = str(data['end_time'])
-        d['testsuites'][ts1]['testcases'][tc]['results']['measurements'] = []
+        d_tc = d['testsuites'][ts1]['testcases'][tc]
+        d_tc['docstring'] = str(doc)
+        d_tc['tags'] = data['tags']
+        d_tc['requirements'] = {}
+        d_tc['results'] = {}
+        d_tc['results']['status'] = data['status']
+        d_tc['results']['status_data'] = str(data['status_data'])
+        d_tc['results']['duration'] = str(data['duration'])
+        d_tc['results']['start_time'] = str(data['start_time'])
+        d_tc['results']['end_time'] = str(data['end_time'])
+        d_tc['results']['measurements'] = []
         if 'measurements' in data.keys():
-            d['testsuites'][ts1]['testcases'][tc]['results']['measurements'].append(data['measurements'])
-
+            d_tc['results']['measurements'].append(data['measurements'])
         if 'additional_data' in data.keys():
             d['additional_data'] = data['additional_data']
-
         d['test_summary']['test_end_time'] = str(data['end_time'])
-        #d['test_summary']['test_duration'] = str(data['end_time'] - d['test_summary']['test_start_time'])
         dur = data['end_time'] - data['start_time']
-        
         d['test_summary']['result_summary']['run'] += 1
         if data['status'] == 'PASS':
             d['test_summary']['result_summary']['succeeded'] += 1
@@ -1693,22 +1691,18 @@ class JSONDb(DBType):
         elif data['status'] == 'TIMEDOUT':
             d['test_summary']['result_summary']['timedout'] += 1
         elif data['status'] == 'ERROR':
-            d['test_summary']['result_summary']['errors'] += 1
-            d['test_summary']['tests_with_failures'].append(data['testcase'])
+            d_ts = d['test_summary']
+            d_ts['result_summary']['errors'] += 1
+            d_ts['tests_with_failures'].append(data['testcase'])
             if data['suite'] not in d['test_summary']['test_suites_with_failures']:
-                d['test_summary']['test_suites_with_failures'].append(data['suite'])
+                d_ts['test_suites_with_failures'].append(data['suite'])
         elif data['status'] == 'FAIL':
-            d['test_summary']['result_summary']['failed'] += 1
-            d['test_summary']['tests_with_failures'].append(data['testcase'])
+            d_ts = d['test_summary']
+            d_ts['result_summary']['failed'] += 1
+            d_ts['tests_with_failures'].append(data['testcase'])
             if data['suite'] not in d['test_summary']['test_suites_with_failures']:
-                d['test_summary']['test_suites_with_failures'].append(data['suite'])
-
-        #print "****************"
-        #jreport = json.dumps(d, indent=2)
-        #self.__dbobj[_TESTRESULT_TN].write(jreport)
-
+                d_ts['test_suites_with_failures'].append(data['suite'])
         self.__jres = json.dumps(d, indent=2)
-        #print self.__jres
 
     def write(self, data, logfile=None):
         if len(data) == 0:
@@ -1724,6 +1718,7 @@ class JSONDb(DBType):
             v.write('\n')
             v.flush()
             v.close()
+
 
 class PTLTestDb(Plugin):
 
@@ -1824,8 +1819,10 @@ class PTLTestDb(Plugin):
             for h1 in mpinfo[h]:
                 if h1 not in minfo.keys():
                     minfo[h1] = {}
-                    minfo[h1]['platform'] = self.__du.get_platform_uname(hostname=h1)
-                    minfo[h1]['os_info'] = self.__du.get_os_info(hostname=h1)
+                    m_h1 = minfo[h1]
+                    m_h1['platform'] = self.__du.get_platform_uname(
+                                       hostname = h1)
+                    m_h1['os_info'] = self.__du.get_os_info(hostname = h1)
                 if h1 in mpinfo['servers']:
                     minfo[h1]['pbs_install_type'] = 'server'
                 elif (h1 in mpinfo['moms'] and h1 not in mpinfo['servers']):
@@ -1841,7 +1838,7 @@ class PTLTestDb(Plugin):
         testdata['testparam'] = getattr(_test, 'param', None)
         testdata['suite'] = sn
         testdata['suitedoc'] = str(_test.__class__.__doc__)
-        testdata['file'] = _test.__module__.replace('.','/') + '.py'
+        testdata['file'] = _test.__module__.replace('.', '/') + '.py'
         testdata['module'] = _test.__module__
         testdata['testcase'] = getattr(_test, '_testMethodName', '<unknown>')
         testdata['testdoc'] = getattr(_test, '_testMethodDoc', '<unknown>')
@@ -1884,8 +1881,8 @@ class PTLTestDb(Plugin):
         self.__dbconn.write(self.__create_data(test, None, 'PASS'))
 
     def finalize(self, result):
-        if hasattr(result,'runduration'):
-            tt = getattr(result, 'runduration', 'datetime') 
+        if hasattr(result, 'runduration'):
+            tt = getattr(result, 'runduration', 'datetime')
             print tt
         self.__dbconn.close()
         self.__dbconn = None

@@ -218,7 +218,8 @@ class DshUtils(object):
         if not self.is_localhost(hostname):
             if pyexec is None:
                 pyexec = self.which(hostname, 'python', level=logging.DEBUG2)
-            cmd = [pyexec, '-c', '"import platform; print ' '.join(platform.uname()).strip()"']
+            cmd = [pyexec, '-c',
+                   '"import platform; print ' '.join(platform.uname()).strip()"']
             ret = self.run_cmd(hostname, cmd=cmd)
             if ret['rc'] != 0 or len(ret['out']) == 0:
                 _msg = 'Unable to retrieve platform info,'
