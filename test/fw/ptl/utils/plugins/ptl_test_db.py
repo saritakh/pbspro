@@ -1816,7 +1816,7 @@ class PTLTestDb(Plugin):
                     minfo[h1] = {}
                     m_h1 = minfo[h1]
                     m_h1['platform'] = self.__du.get_platform_uname(
-                                       hostname=h1)
+                                           hostname=h1)
                     m_h1['os_info'] = self.__du.get_os_info(hostname=h1)
                 if h1 in mpinfo['servers']:
                     minfo[h1]['pbs_install_type'] = 'server'
