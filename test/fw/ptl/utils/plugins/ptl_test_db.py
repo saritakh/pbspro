@@ -1644,11 +1644,7 @@ class JSONDb(DBType):
             d['test_summary']['test_suites_with_failures'] = []
             d['additional_data'] = {}
         else:
-            #if len(self.__jres) > 0:
-            #    d = json.loads(self.__jres)
             d = json.loads(self.__jres)
-
-        ##########################################################
         ts1 = data['suite']
         if data['suite'] not in d['testsuites'].keys():
             d['testsuites'].update({data['suite']: {}})
@@ -1694,13 +1690,13 @@ class JSONDb(DBType):
             d_ts = d['test_summary']
             d_ts['result_summary']['errors'] += 1
             d_ts['tests_with_failures'].append(data['testcase'])
-            if data['suite'] not in d['test_summary']['test_suites_with_failures']:
+            if data['suite'] not in d_ts['test_suites_with_failures']:
                 d_ts['test_suites_with_failures'].append(data['suite'])
         elif data['status'] == 'FAIL':
             d_ts = d['test_summary']
             d_ts['result_summary']['failed'] += 1
             d_ts['tests_with_failures'].append(data['testcase'])
-            if data['suite'] not in d['test_summary']['test_suites_with_failures']:
+            if data['suite'] not in d_ts['test_suites_with_failures']:
                 d_ts['test_suites_with_failures'].append(data['suite'])
         self.__jres = json.dumps(d, indent=2)
 
@@ -1712,7 +1708,6 @@ class JSONDb(DBType):
             self.__write_test_data(data['testdata'])
 
     def close(self):
-        #dt = json.loads(self.__jres)
         self.__dbobj[_TESTRESULT_TN].write(self.__jres)
         for v in self.__dbobj.values():
             v.write('\n')
@@ -1821,8 +1816,8 @@ class PTLTestDb(Plugin):
                     minfo[h1] = {}
                     m_h1 = minfo[h1]
                     m_h1['platform'] = self.__du.get_platform_uname(
-                                       hostname = h1)
-                    m_h1['os_info'] = self.__du.get_os_info(hostname = h1)
+                                       hostname=h1)
+                    m_h1['os_info'] = self.__du.get_os_info(hostname=h1)
                 if h1 in mpinfo['servers']:
                     minfo[h1]['pbs_install_type'] = 'server'
                 elif (h1 in mpinfo['moms'] and h1 not in mpinfo['servers']):
