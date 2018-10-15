@@ -1814,10 +1814,9 @@ class PTLTestDb(Plugin):
             for h1 in mpinfo[h]:
                 if h1 not in minfo.keys():
                     minfo[h1] = {}
-                    m_h1 = minfo[h1]
-                    m_h1['platform'] = self.__du.get_platform_uname(
-                                           hostname=h1)
-                    m_h1['os_info'] = self.__du.get_os_info(hostname=h1)
+                    mh = minfo[h1]
+                    mh['platform'] = self.__du.get_platform_uname(hostname=h1)
+                    mh['os_info'] = self.__du.get_os_info(hostname=h1)
                 if h1 in mpinfo['servers']:
                     minfo[h1]['pbs_install_type'] = 'server'
                 elif (h1 in mpinfo['moms'] and h1 not in mpinfo['servers']):
