@@ -158,7 +158,7 @@ class DBType(object):
         _msg += ' %s' % (str(self.__class__.__name__))
         raise PTLDbError(rc=1, rv=False, msg=_msg)
 
-    def close(self):
+    def close(self, result=None):
         """
         Close the database
         """
@@ -559,7 +559,7 @@ class PostgreSQLDb(DBType):
                 self.__write_proc_data(md['procs'], logfile)
         self.__index += 1
 
-    def close(self):
+    def close(self, result=None):
         self.__dbobj.commit()
         self.__dbobj.close()
         del self.__dbobj
@@ -958,7 +958,7 @@ class SQLiteDb(DBType):
                 self.__write_proc_data(md['procs'], logfile)
         self.__index += 1
 
-    def close(self):
+    def close(self, result=None):
         self.__dbobj.commit()
         self.__dbobj.close()
         del self.__dbobj
@@ -1096,7 +1096,7 @@ class FileDb(DBType):
                 self.__write_proc_data(md['procs'], logfile)
         self.__index += 1
 
-    def close(self):
+    def close(self, result=None):
         for v in self.__dbobj.values():
             v.write('\n')
             v.flush()
@@ -1581,7 +1581,7 @@ class HTMLDb(DBType):
         if 'testdata' in data.keys():
             self.__write_test_data(data['testdata'])
 
-    def close(self):
+    def close(self, result=None):
         for v in self.__dbobj.values():
             v.write('\n')
             v.flush()
@@ -1644,7 +1644,8 @@ class JSONDb(DBType):
             d['test_summary']['test_suites_with_failures'] = []
             d['additional_data'] = {}
         else:
-            d = json.loads(self.__jres)
+            self.__dbobj[_TESTRESULT_TN].seek(0)
+            d = json.load(self.__dbobj[_TESTRESULT_TN])
         ts1 = data['suite']
         if data['suite'] not in d['testsuites'].keys():
             d['testsuites'].update({data['suite']: {}})
@@ -1698,7 +1699,8 @@ class JSONDb(DBType):
             d_ts['tests_with_failures'].append(data['testcase'])
             if data['suite'] not in d_ts['test_suites_with_failures']:
                 d_ts['test_suites_with_failures'].append(data['suite'])
-        self.__jres = json.dumps(d, indent=2)
+        self.__dbobj[_TESTRESULT_TN].seek(0)
+        json.dump(d, self.__dbobj[_TESTRESULT_TN], indent=2)
 
     def write(self, data, logfile=None):
         if len(data) == 0:
@@ -1707,8 +1709,18 @@ class JSONDb(DBType):
         if 'testdata' in data.keys():
             self.__write_test_data(data['testdata'])
 
-    def close(self):
-        self.__dbobj[_TESTRESULT_TN].write(self.__jres)
+    def close(self, result=None):
+        start_time = datetime.now()
+        stop_time = datetime.now()
+        if result is not None:
+            start_time = result.start
+            stop_time = result.stop
+            self.__dbobj[_TESTRESULT_TN].seek(0)
+            df = json.load(self.__dbobj[_TESTRESULT_TN])
+            dur = str(stop_time - start_time)
+            df['test_summary']['test_duration'] = dur
+            self.__dbobj[_TESTRESULT_TN].seek(0)
+            json.dump(df, self.__dbobj[_TESTRESULT_TN], indent=2)
         for v in self.__dbobj.values():
             v.write('\n')
             v.flush()
@@ -1784,7 +1796,6 @@ class PTLTestDb(Plugin):
             return {}
         testdata = {}
         data = {}
-
         if (hasattr(_test, 'server') and
                 (getattr(_test, 'server', None) is not None)):
             testdata['pbs_version'] = _test.server.attributes['pbs_version']
@@ -1796,7 +1807,6 @@ class PTLTestDb(Plugin):
         else:
             testdata['pbs_version'] = 'unknown'
             testdata['hostname'] = 'unknown'
-
         minfo = {}
         mpinfo = {
             'servers': [],
@@ -1805,11 +1815,9 @@ class PTLTestDb(Plugin):
             'moms': [],
             'clients': []
         }
-
         mpinfo['servers'] = _test.servers.host_keys()
         mpinfo['moms'] = _test.moms.host_keys()
         mpinfo['comms'] = _test.comms.host_keys()
-
         for h in mpinfo.keys():
             for h1 in mpinfo[h]:
                 if h1 not in minfo.keys():
@@ -1827,7 +1835,6 @@ class PTLTestDb(Plugin):
                     minfo[h1]['pbs_install_type'] = 'client'
                 else:
                     minfo[h1]['pbs_install_type'] = 'null'
-
         testdata['machinfo'] = minfo
         testdata['testparam'] = getattr(_test, 'param', None)
         testdata['suite'] = sn
@@ -1875,10 +1882,7 @@ class PTLTestDb(Plugin):
         self.__dbconn.write(self.__create_data(test, None, 'PASS'))
 
     def finalize(self, result):
-        if hasattr(result, 'runduration'):
-            tt = getattr(result, 'runduration', 'datetime')
-            print tt
-        self.__dbconn.close()
+        self.__dbconn.close(result)
         self.__dbconn = None
         self.__dbaccess = None
 

@@ -106,6 +106,8 @@ class _PtlTestResult(unittest.TestResult):
     separator1 = '=' * 70
     separator2 = '___m_oo_m___'
     logger = logging.getLogger(__name__)
+    start = datetime.datetime.now()
+    stop = datetime.datetime.now()
 
     def __init__(self, stream, descriptions, verbosity, config=None):
         unittest.TestResult.__init__(self)
@@ -338,7 +340,7 @@ class _PtlTestResult(unittest.TestResult):
                 return False
         return True
 
-    def printSummary(self, start, stop):
+    def printSummary(self):
         """
         Called by the test runner to print the final summary of test
         run results.
@@ -401,8 +403,7 @@ class _PtlTestResult(unittest.TestResult):
         _msg += ', skipped: ' + str(skip)
         _msg += ', timedout: ' + str(timedout)
         msg += [_msg]
-        self.runduration = stop - start
-        msg += ['Tests run in ' + str(self.runduration)]
+        msg += ['Tests run in ' + str(self.stop - self.start)]
         self.logger.info('\n'.join(msg))
 
 
@@ -437,13 +438,13 @@ class PtlTestRunner(TextTestRunner):
         if wrapped is not None:
             self.stream = wrapped
         self.result = result = self._makeResult()
-        start = datetime.datetime.now()
+        self.start = datetime.datetime.now()
         try:
             test(result)
         except KeyboardInterrupt:
             do_exit = True
-        stop = datetime.datetime.now()
-        result.printSummary(start, stop)
+        self.stop = datetime.datetime.now()
+        result.printSummary()
         self.config.plugins.finalize(result)
         if do_exit:
             sys.exit(1)
