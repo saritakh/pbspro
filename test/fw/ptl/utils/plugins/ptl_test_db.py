@@ -1705,7 +1705,6 @@ class JSONDb(DBType):
     def write(self, data, logfile=None):
         if len(data) == 0:
             return
-        print data
         if 'testdata' in data.keys():
             self.__write_test_data(data['testdata'])
 

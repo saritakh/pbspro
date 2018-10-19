@@ -106,8 +106,6 @@ class _PtlTestResult(unittest.TestResult):
     separator1 = '=' * 70
     separator2 = '___m_oo_m___'
     logger = logging.getLogger(__name__)
-    start = datetime.datetime.now()
-    stop = datetime.datetime.now()
 
     def __init__(self, stream, descriptions, verbosity, config=None):
         unittest.TestResult.__init__(self)
@@ -121,7 +119,8 @@ class _PtlTestResult(unittest.TestResult):
         self.skipped = []
         self.timedout = []
         self.handler = TestLogCaptureHandler()
-        self.runduration = datetime.datetime.now()
+        self.start = datetime.datetime.now()
+        self.stop = self.start
 
     def getDescription(self, test):
         """
@@ -438,12 +437,12 @@ class PtlTestRunner(TextTestRunner):
         if wrapped is not None:
             self.stream = wrapped
         self.result = result = self._makeResult()
-        self.start = datetime.datetime.now()
+        self.result.start = datetime.datetime.now()
         try:
             test(result)
         except KeyboardInterrupt:
             do_exit = True
-        self.stop = datetime.datetime.now()
+        self.result.stop = datetime.datetime.now()
         result.printSummary()
         self.config.plugins.finalize(result)
         if do_exit:
