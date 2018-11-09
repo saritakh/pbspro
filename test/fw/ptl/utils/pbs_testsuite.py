@@ -422,6 +422,7 @@ class PBSTestSuite(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        ofile = "/var/tmp/serv_ofile" 
         cls.log_enter_setup(True)
         cls._testMethodName = 'setUpClass'
         cls.parse_param()
@@ -432,6 +433,11 @@ class PBSTestSuite(unittest.TestCase):
         cls.init_schedulers()
         cls.init_moms()
         cls.log_end_setup(True)
+        rv = cls.server.save_configuration(ofile)
+        if not rv:
+            _msg = 'Server save configuration failed'
+            raise setUpClassError(_msg)
+
 
     def setUp(self):
         if 'skip-setup' in self.conf:
@@ -1077,4 +1083,6 @@ class PBSTestSuite(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        ofile2 = "/var/tmp/serv_ofile" 
         cls._testMethodName = 'tearDownClass'
+        cls.server.load_configuration(ofile2)

@@ -144,6 +144,8 @@ def usage():
             'run\n']
     msg += ['--follow-child: if set, walk the test hierarchy and run ' +
             'each test\n']
+    msg += ['--use-current-setup: if set, the test is run on current ' + 
+            'set of PBS configurations of the test setup']
     msg += ['--tags=<tag>: Select only tests that have <tag> tag.']
     msg += [' can be applied multiple times\n']
     msg += ['               Format: [!]tag[,tag]\n']
@@ -195,6 +197,7 @@ if __name__ == '__main__':
     list_test = False
     showinfo = False
     follow = False
+    usecurrentsetup = False
     excludes = None
     stoponfail = False
     paramfile = None
@@ -228,7 +231,7 @@ if __name__ == '__main__':
     largs += ['db-name=', 'db-access=', 'db-type=', 'genhtml-bin=']
     largs += ['lcov-bin=', 'lcov-data=', 'lcov-out=', 'lcov-nosrc']
     largs += ['lcov-baseurl=', 'tags=', 'eval-tags=', 'tags-info', 'list-tags']
-    largs += ['version', 'verbose', 'follow-child']
+    largs += ['version', 'verbose', 'follow-child', 'use-current-setup']
     largs += ['stop-on-failure', 'enable-nose-debug']
     largs += ['post-analysis-data=', 'gen-ts-tree']
     largs += ['tc-failure-threshold=', 'cumulative-tc-failure-threshold=']
@@ -315,6 +318,8 @@ if __name__ == '__main__':
             stoponfail = True
         elif o == '--follow-child':
             follow = True
+        elif o == '--use-current-setup':
+            usecurrentsetup = True
         elif o == '--log-conf':
             logconf = val
         elif o == '--min-pyver':

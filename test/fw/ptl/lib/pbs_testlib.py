@@ -4254,8 +4254,13 @@ class PBSService(PBSObject):
                     break
             f.close()
 
-            if objtype and objtype in conf:
+            print conf
+            if objtype is not None and objtype in conf.keys():
                 conf = conf[objtype]
+                print "SKH first if load_configuration**************************"
+                print objtype
+                print conf
+                print "SKH first if load_configuration**************************"
             else:
                 # load all object types that could be in infile
                 newconf = {}
@@ -4263,8 +4268,12 @@ class PBSService(PBSObject):
                     if ky not in conf:
                         conf[ky] = {}
                     newconf = dict(newconf.items() + conf[ky].items())
+                    print "SKH NEW CONF load_configuration**************************"
+                    print newconf
                 conf = newconf
 
+            print "SKH CONF post if**************************"
+            print conf
             for k, v in conf.items():
                 fn = self.du.create_temp_file()
                 with open(fn, 'w') as fd:
@@ -4273,16 +4282,24 @@ class PBSService(PBSObject):
                     if k.startswith('qmgr_'):
                         qmgr = os.path.join(self.client_conf['PBS_EXEC'],
                                             'bin', 'qmgr')
-                        fd.write("\n".join(v))
-                        self.du.run_cmd(self.hostname, [qmgr], cstdin=fd,
-                                        sudo=True)
+                        for i in range(len(v)):
+                            #fd.write("\n".join(v[l]))
+                            if not v[i].startswith("#"):
+                                self.du.run_cmd(self.hostname, [qmgr, v[i]], stdin=fn,
+                                                sudo=True)
+                            print "SKH v in for loop**************************"
+                            print v[i]
                     else:
-                        fd.write("\n".join(v))
+                        #fd.write("\n".join(v))
                         # append the last line
-                        fd.write("\n")
+                        #fd.write("\n")
                         self.du.run_cmd(self.hostname, ['cp', fn, k],
                                         sudo=True)
-                    os.remove(fn)
+
+            self.du.run_cmd(self.hostname, [qmgr, '<', fn], #Need to update this filename
+                                    sudo=True)
+
+                os.remove(fn)
 
             return True
         return False
@@ -5204,18 +5221,23 @@ class Server(PBSService):
         """
         conf = {}
         sconf = {MGR_OBJ_SERVER: conf}
-
-        rd = os.path.join(self.pbs_conf['PBS_HOME'], 'server_priv',
-                          'resourcedef')
-        self._save_config_file(conf, rd)
+        print "ONE++++++++++++++++++++++"
 
         qmgr = os.path.join(self.client_conf['PBS_EXEC'], 'bin', 'qmgr')
+
+        ret = self.du.run_cmd(self.client, [qmgr, '-c', 'p r'], sudo=True)
+        if ret['rc'] != 0:
+            return False
+        else:
+            conf['qmgr_print_resource'] = ret['out']
+        print "TWO++++++++++++++++++++++"
 
         ret = self.du.run_cmd(self.client, [qmgr, '-c', 'p s'], sudo=True)
         if ret['rc'] != 0:
             return False
         else:
             conf['qmgr_print_server'] = ret['out']
+        print "THREE++++++++++++++++++++++"
 
         ret = self.du.run_cmd(self.hostname, [qmgr, '-c', 'p sched'],
                               sudo=True)
@@ -5223,17 +5245,20 @@ class Server(PBSService):
             return False
         else:
             conf['qmgr_print_sched'] = ret['out']
+        print "FOUR++++++++++++++++++++++"
 
-        ret = self.du.run_cmd(self.hostname, [qmgr, '-c', 'p h'], sudo=True)
+        ret = self.du.run_cmd(self.hostname, [qmgr, '-c', 'l h'], sudo=True)
         if ret['rc'] != 0:
             return False
         else:
             conf['qmgr_print_hook'] = ret['out']
+        print "FIVE++++++++++++++++++++++"
 
         try:
             f = open(outfile, mode)
             cPickle.dump(sconf, f)
             f.close()
+            print "SIX++++++++++++++++++++++"
         except:
             self.logger.error('Error processing file ' + outfile)
             return False
