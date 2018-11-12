@@ -4254,7 +4254,6 @@ class PBSService(PBSObject):
                     break
             f.close()
 
-            print conf
             if objtype is not None and objtype in conf.keys():
                 conf = conf[objtype]
             else:
@@ -4266,34 +4265,24 @@ class PBSService(PBSObject):
                     newconf = dict(newconf.items() + conf[ky].items())
                 conf = newconf
 
-            print conf
+            qmgr = os.path.join(self.client_conf['PBS_EXEC'],
+                                'bin', 'qmgr')
             fn = self.du.create_temp_file()
             with open(fn, 'w') as fd:
                 for k, v in conf.items():
                     # handle server data saved as output of qmgr commands
                     # by piping data back into qmgr
                     if k.startswith('qmgr_'):
-                        qmgr = os.path.join(self.client_conf['PBS_EXEC'],
-                                            'bin', 'qmgr')
                         for i in range(len(v)):
-                            #fd.write("\n".join(v[l]))
                             if not v[i].startswith("#"):
-                                #self.du.run_cmd(self.hostname, [qmgr, v[i]],
-                                #                sudo=True)
                                 fd.write(v[i])
                                 fd.write('\n')
-                                print "SKH v in for loop**************************"
-                                print v[i]
                     else:
-                        #fd.write("\n".join(v))
-                        # append the last line
-                        #fd.write("\n")
-                        #self.du.run_cmd(self.hostname, ['cp', fn, k],
-                        #                sudo=True)
+                        time.sleep(1)
                         print "SKH ________________"
 
             self.du.run_cmd(self.hostname, [qmgr, '<', fn],
-                                    sudo=True, as_script=True)
+                            sudo=True, as_script=True)
             os.remove(fn)
 
             return True

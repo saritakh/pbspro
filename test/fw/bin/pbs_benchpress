@@ -144,7 +144,7 @@ def usage():
             'run\n']
     msg += ['--follow-child: if set, walk the test hierarchy and run ' +
             'each test\n']
-    msg += ['--use-current-setup: if set, the test is run on current ' + 
+    msg += ['--use-current-setup: if set, the test is run on current ' +
             'set of PBS configurations of the test setup']
     msg += ['--tags=<tag>: Select only tests that have <tag> tag.']
     msg += [' can be applied multiple times\n']
