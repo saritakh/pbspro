@@ -4257,10 +4257,6 @@ class PBSService(PBSObject):
             print conf
             if objtype is not None and objtype in conf.keys():
                 conf = conf[objtype]
-                print "SKH first if load_configuration**************************"
-                print objtype
-                print conf
-                print "SKH first if load_configuration**************************"
             else:
                 # load all object types that could be in infile
                 newconf = {}
@@ -4268,15 +4264,12 @@ class PBSService(PBSObject):
                     if ky not in conf:
                         conf[ky] = {}
                     newconf = dict(newconf.items() + conf[ky].items())
-                    print "SKH NEW CONF load_configuration**************************"
-                    print newconf
                 conf = newconf
 
-            print "SKH CONF post if**************************"
             print conf
-            for k, v in conf.items():
-                fn = self.du.create_temp_file()
-                with open(fn, 'w') as fd:
+            fn = self.du.create_temp_file()
+            with open(fn, 'w') as fd:
+                for k, v in conf.items():
                     # handle server data saved as output of qmgr commands
                     # by piping data back into qmgr
                     if k.startswith('qmgr_'):
@@ -4285,21 +4278,23 @@ class PBSService(PBSObject):
                         for i in range(len(v)):
                             #fd.write("\n".join(v[l]))
                             if not v[i].startswith("#"):
-                                self.du.run_cmd(self.hostname, [qmgr, v[i]], stdin=fn,
-                                                sudo=True)
-                            print "SKH v in for loop**************************"
-                            print v[i]
+                                #self.du.run_cmd(self.hostname, [qmgr, v[i]],
+                                #                sudo=True)
+                                fd.write(v[i])
+                                fd.write('\n')
+                                print "SKH v in for loop**************************"
+                                print v[i]
                     else:
                         #fd.write("\n".join(v))
                         # append the last line
                         #fd.write("\n")
-                        self.du.run_cmd(self.hostname, ['cp', fn, k],
-                                        sudo=True)
+                        #self.du.run_cmd(self.hostname, ['cp', fn, k],
+                        #                sudo=True)
+                        print "SKH ________________"
 
-            self.du.run_cmd(self.hostname, [qmgr, '<', fn], #Need to update this filename
-                                    sudo=True)
-
-                os.remove(fn)
+            self.du.run_cmd(self.hostname, [qmgr, '<', fn],
+                                    sudo=True, as_script=True)
+            os.remove(fn)
 
             return True
         return False
