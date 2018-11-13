@@ -4265,9 +4265,8 @@ class PBSService(PBSObject):
                     newconf = dict(newconf.items() + conf[ky].items())
                 conf = newconf
 
-            qmgr = os.path.join(self.client_conf['PBS_EXEC'],
-                                'bin', 'qmgr')
             fn = self.du.create_temp_file()
+            fm = self.du.create_temp_file()
             with open(fn, 'w') as fd:
                 for k, v in conf.items():
                     # handle server data saved as output of qmgr commands
@@ -4276,15 +4275,21 @@ class PBSService(PBSObject):
                         for i in range(len(v)):
                             if not v[i].startswith("#"):
                                 fd.write(v[i])
-                                fd.write('\n')
+                                fd.write("\n")
                     else:
-                        time.sleep(1)
-                        print "SKH ________________"
-
-            self.du.run_cmd(self.hostname, [qmgr, '<', fn],
-                            sudo=True, as_script=True)
+                        with open(fm, 'w') as fd2:
+                            fd2.write("\n".join(v))
+                            #append the last line
+                            fd2.write("\n")
+                            self.du.run_cmd(self.hostname, ['cp', fm, k],
+                                            sudo=True)
+            if objtype == MGR_OBJ_SERVER:
+                qmgr = os.path.join(self.client_conf['PBS_EXEC'],
+                                    'bin', 'qmgr')
+                self.du.run_cmd(self.hostname, [qmgr, '<', fn],
+                                sudo=True, as_script=True)
             os.remove(fn)
-
+            os.remove(fm)
             return True
         return False
 
@@ -5205,7 +5210,6 @@ class Server(PBSService):
         """
         conf = {}
         sconf = {MGR_OBJ_SERVER: conf}
-        print "ONE++++++++++++++++++++++"
 
         qmgr = os.path.join(self.client_conf['PBS_EXEC'], 'bin', 'qmgr')
 
@@ -5214,14 +5218,12 @@ class Server(PBSService):
             return False
         else:
             conf['qmgr_print_resource'] = ret['out']
-        print "TWO++++++++++++++++++++++"
 
         ret = self.du.run_cmd(self.client, [qmgr, '-c', 'p s'], sudo=True)
         if ret['rc'] != 0:
             return False
         else:
             conf['qmgr_print_server'] = ret['out']
-        print "THREE++++++++++++++++++++++"
 
         ret = self.du.run_cmd(self.hostname, [qmgr, '-c', 'p sched'],
                               sudo=True)
@@ -5229,20 +5231,17 @@ class Server(PBSService):
             return False
         else:
             conf['qmgr_print_sched'] = ret['out']
-        print "FOUR++++++++++++++++++++++"
 
-        ret = self.du.run_cmd(self.hostname, [qmgr, '-c', 'l h'], sudo=True)
+        ret = self.du.run_cmd(self.hostname, [qmgr, '-c', 'p h'], sudo=True)
         if ret['rc'] != 0:
             return False
         else:
             conf['qmgr_print_hook'] = ret['out']
-        print "FIVE++++++++++++++++++++++"
 
         try:
             f = open(outfile, mode)
             cPickle.dump(sconf, f)
             f.close()
-            print "SIX++++++++++++++++++++++"
         except:
             self.logger.error('Error processing file ' + outfile)
             return False

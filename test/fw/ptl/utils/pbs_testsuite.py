@@ -422,7 +422,8 @@ class PBSTestSuite(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        ofile = "/var/tmp/serv_ofile"
+        #servfile = "/var/tmp/servfile"
+        #schedfile = "/var/tmp/schedfile"
         cls.log_enter_setup(True)
         cls._testMethodName = 'setUpClass'
         cls.parse_param()
@@ -433,10 +434,15 @@ class PBSTestSuite(unittest.TestCase):
         cls.init_schedulers()
         cls.init_moms()
         cls.log_end_setup(True)
-        rv = cls.server.save_configuration(ofile)
-        if not rv:
-            _msg = 'Server save configuration failed'
-            raise setUpClassError(_msg)
+        cls.save_load_pbs(save=True)
+        #rv = cls.server.save_configuration(servfile)
+        #if not rv:
+        #    _msg = 'Server save configuration failed'
+        #    raise setUpClassError(_msg)
+        #rv = cls.scheduler.save_configuration(schedfile)
+        #if not rv:
+        #    _msg = 'Scheduler save configuration failed'
+        #    raise setUpClassError(_msg)
 
     def setUp(self):
         if 'skip-setup' in self.conf:
@@ -1069,6 +1075,23 @@ class PBSTestSuite(unittest.TestCase):
         cls.logger.info(_m)
         cls.logger.info('=' * _m_len)
 
+    @classmethod
+    def save_load_pbs(cls, save=False):
+        servfile = "/var/tmp/servfile"
+        schedfile = "/var/tmp/schedfile"
+        if save == True:
+            rv = cls.server.save_configuration(servfile)
+            if not rv:
+                _msg = 'Server save configuration failed'
+                raise setUpClassError(_msg)
+            rv = cls.scheduler.save_configuration(schedfile)
+            if not rv:
+                _msg = 'Scheduler save configuration failed'
+                raise setUpClassError(_msg)
+        else:
+            cls.server.load_configuration(servfile)
+            cls.scheduler.load_configuration(schedfile)
+
     def tearDown(self):
         """
         verify that ``server`` and ``scheduler`` are up
@@ -1082,6 +1105,9 @@ class PBSTestSuite(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        ofile2 = "/var/tmp/serv_ofile"
+        #servfile2 = "/var/tmp/servfile"
+        #schedfile2 = "/var/tmp/schedfile"
         cls._testMethodName = 'tearDownClass'
-        cls.server.load_configuration(ofile2)
+        cls.save_load_pbs(save = False)
+        #cls.server.load_configuration(servfile2)
+        #cls.scheduler.load_configuration(schedfile2)
