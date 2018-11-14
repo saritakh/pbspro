@@ -1108,6 +1108,6 @@ class PBSTestSuite(unittest.TestCase):
         #servfile2 = "/var/tmp/servfile"
         #schedfile2 = "/var/tmp/schedfile"
         cls._testMethodName = 'tearDownClass'
-        cls.save_load_pbs(save = False)
+        cls.save_load_pbs(save=False)
         #cls.server.load_configuration(servfile2)
         #cls.scheduler.load_configuration(schedfile2)
