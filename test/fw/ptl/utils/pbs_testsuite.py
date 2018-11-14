@@ -133,6 +133,7 @@ SMOKE = 'smoke'
 REGRESSION = 'regression'
 NUMNODES = 'numnodes'
 TIMEOUT_KEY = '__testcase_timeout__'
+REQUIREMENT = '__REQUIREMENT_INFO__'
 
 
 def skip(reason="Skipped test execution"):
@@ -206,6 +207,26 @@ def skipOnCpuSet(function):
             self.skipTest(reason='capability not supported on Cpuset')
         else:
             function(self, *args, **kwargs)
+    wrapper.__doc__ = function.__doc__
+    wrapper.__name__ = function.__name__
+    return wrapper
+
+def requirements(function):
+    """
+    Decorator to skip a test on a CpuSet system
+    """
+
+    def wrapper(num_servers=1, num_moms=1, num_comms=1, num_clients=1,
+                no_mom_on_server=False, no_comm_on_server=False,
+                no_comm_on_mom=True):
+        self.num_servers=num_servers
+        self.num_moms=num_moms
+        self.num_comms=num_comms
+        self.num_clients=num_clients
+        self.no_mom_on_server=no_mom_on_server
+        self.no_comm_on_server=no_comm_on_server
+        self.no_comm_on_mom=no_comm_on_mom
+        function(self, *args, **kwargs)
     wrapper.__doc__ = function.__doc__
     wrapper.__name__ = function.__name__
     return wrapper
