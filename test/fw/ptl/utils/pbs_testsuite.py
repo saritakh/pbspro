@@ -134,6 +134,7 @@ REGRESSION = 'regression'
 NUMNODES = 'numnodes'
 TIMEOUT_KEY = '__testcase_timeout__'
 MINIMUM_TESTCASE_TIMEOUT = 600
+REQUIREMENT = '__REQUIREMENT_INFO__'
 
 
 def skip(reason="Skipped test execution"):
@@ -221,6 +222,32 @@ def skipOnCpuSet(function):
     wrapper.__doc__ = function.__doc__
     wrapper.__name__ = function.__name__
     return wrapper
+
+def requirements(num_servers=1, num_moms=1, num_comms=1, num_clients=1,
+                 no_mom_on_server=False, no_comm_on_server=False,
+                 no_comm_on_mom=True):
+    """
+    Decorator to specify and validate cluster information required for a test
+    test is skipped if requirements are not satisfied by the test setup
+    """
+
+    def decorated(function):
+        def wrapper(self, *args, **kwargs):
+            self.requirements_data['num_servers'] = num_servers
+            self.requirements_data['num_moms'] = num_moms
+            self.requirements_data['num_comms'] = num_comms
+            self.requirements_data['num_clients'] = num_clients
+            self.requirements_data['no_mom_on_server'] = no_mom_on_server
+            self.requirements_data['no_comm_on_server'] = no_comm_on_server
+            self.requirements_data['no_comm_on_mom'] = no_comm_on_mom
+            if not self.validate_requirements():
+                self.skipTest(reason='requirements not matching test setup')
+            else:
+                function(self, *args, **kwargs)
+        wrapper.__doc__ = function.__doc__
+        wrapper.__name__ = function.__name__
+        return wrapper
+    return decorated
 
 
 class PBSServiceInstanceWrapper(dict):
@@ -433,6 +460,7 @@ class PBSTestSuite(unittest.TestCase):
     scheds = None
     moms = None
     comms = None
+    requirements_data = {}
 
     @classmethod
     def setUpClass(cls):
@@ -1405,7 +1433,7 @@ class PBSTestSuite(unittest.TestCase):
         """
         Skip Test
 
-        :param reason: message to indicate why test is skipped
+        :param reason: number of servers present in test cluster
         :type reason: str or None
         """
         if reason:
@@ -1415,6 +1443,35 @@ class PBSTestSuite(unittest.TestCase):
         raise SkipTest(reason)
 
     skip_test = skipTest
+
+    def validate_requirements(self):
+        """
+        Validates test steup with the requirements decorator parameters
+        which are validated against the test configuration parameters
+        passed in '-p' or 'param_file'
+
+        return True if validation succeeds else False if validation fails
+        """
+        print "&&&&&&&&&&&&&&&&&&&&&&&&"
+        print self.requirements_data
+        print "&&&&&&&&&&&&&&&&&&&&&&&&"
+        servers_count = len(self.servers.values())
+        moms_count = len(self.moms.values())
+        comms_count = len(self.comms.values())
+        if (servers_count != self.requirements_data['num_servers'] or
+            moms_count != self.requirements_data['num_moms'] or
+            comms_count != self.requirements_data['num_comms']):
+            return False
+        if (self.server.hostname == self.mom.hostname and
+            self.requirements_dic.no_mom_on_server):
+            return False
+        if (self.server.hostname == self.comm.hostname and
+            self.requirements_dic.no_comm_on_server):
+            return False
+        if (self.mom.hostname == self.comm.hostname and
+            self.requirements_dic.no_comm_on_mom):
+            return False
+        return True
 
     @classmethod
     def log_enter_teardown(cls, iscls=False):
