@@ -134,7 +134,6 @@ REGRESSION = 'regression'
 NUMNODES = 'numnodes'
 TIMEOUT_KEY = '__testcase_timeout__'
 MINIMUM_TESTCASE_TIMEOUT = 600
-REQUIREMENT = '__REQUIREMENT_INFO__'
 
 
 def skip(reason="Skipped test execution"):
@@ -223,32 +222,90 @@ def skipOnCpuSet(function):
     wrapper.__name__ = function.__name__
     return wrapper
 
-def requirements(num_servers=1, num_moms=1, num_comms=1, num_clients=1,
-                 no_mom_on_server=False, no_comm_on_server=False,
-                 no_comm_on_mom=True):
-    """
-    Decorator to specify and validate cluster information required for a test
-    test is skipped if requirements are not satisfied by the test setup
-    """
 
-    def decorated(function):
-        def wrapper(self, *args, **kwargs):
-            self.requirements_data['num_servers'] = num_servers
-            self.requirements_data['num_moms'] = num_moms
-            self.requirements_data['num_comms'] = num_comms
-            self.requirements_data['num_clients'] = num_clients
-            self.requirements_data['no_mom_on_server'] = no_mom_on_server
-            self.requirements_data['no_comm_on_server'] = no_comm_on_server
-            self.requirements_data['no_comm_on_mom'] = no_comm_on_mom
-            if not self.validate_requirements():
-                self.skipTest(reason='requirements not matching test setup')
+#def requirements(num_servers=1, num_moms=1, num_comms=1, num_clients=1,
+#             no_mom_on_server=False, no_comm_on_server=False,
+#             no_comm_on_mom=True):
+def requirements(*args, **kwargs):
+    """
+    Unconditionally skip a test.
+
+    :param reason: Reason for the skip
+    :type reason: str or None
+    """
+    skip_flag = True
+    reason = "Skipped test execution"
+    req_data = {}
+    #    'num_servers': num_servers,
+    #    'num_moms': num_moms,
+    #    'num_comms': num_comms,
+    #    'num_clients': num_clients,
+    #    'no_mom_on_server': no_mom_on_server,
+    #    'no_comm_on_server': no_comm_on_server,
+    #    'no_comm_on_mom': no_comm_on_mom
+    #}
+    clusterparam = ['num_servers','num_moms','num_comms','num_clients','no_mom_on_server','no_comm_on_server']
+    def wrap_obj(test_item):
+        #print req_data
+        print "wrapper SKHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
+        #print args
+        #print "wrapper SKHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
+        print kwargs
+        reqobj = getattr(test_item, REQTKEY, [])
+        print reqobj
+        for name, value in kwargs.items():
+            #print name
+            #print value
+            if name not in clusterparam:
+                print "INVALIDDDDDDDDDDDDDDDD"
+                #raise setUpClassError("Invalid clusterinfo parameter")
+            req_data[name] = value
+        print req_data
+        #for name, value in kwargs.iteritems():
+        #    if name not in clusterparam:
+        #       raise setUpClassError("Invalid clusterinfo parameter")
+        #    print name
+        #    print value
+        #    #reqobj.append('%s=%s' % (name, value))
+        #    #setattr(test_item, name, value)
+        #setattr(test_item, REQUIREMENTS, dict(req_data))
+        #test_item.validate_requirements()
+        #gat = getattr(test_item.test, param, None)
+        #print gat
+        #print test_item.param
+        mycondition = True
+        if mycondition:
+            test_item.__unittest_skip__ = skip_flag
+            test_item.__unittest_skip_why__ = reason
+        return test_item
+    return wrap_obj
+
+def set_testparam(testparam=None, paramfile=None):
+    print "inside set_testparam%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+    if paramfile is not None:
+        _pf = open(paramfile, 'r')
+        _params_from_file = _pf.readlines()
+        _pf.close()
+        _nparams = []
+        for l in range(len(_params_from_file)):
+            if _params_from_file[l].startswith('#'):
+                continue
             else:
-                function(self, *args, **kwargs)
-        wrapper.__doc__ = function.__doc__
-        wrapper.__name__ = function.__name__
-        return wrapper
-    return decorated
+                _nparams.append(_params_from_file[l])
+        _f = ','.join(map(lambda l: l.strip('\r\n'), _nparams))
+        if testparam is not None:
+            testparam += ',' + _f
+        else:
+            testparam = _f
+        
+    TEST_PARAM = testparam
+    print TEST_PARAM
+    PBSTestSuite.param = TEST_PARAM
+    #print "TEST_PARAM=%s" % TEST_PARAM
 
+def set_testparam_two():
+    print "inside set_testparam_two"
+    print "######################################################3"
 
 class PBSServiceInstanceWrapper(dict):
 
@@ -272,6 +329,7 @@ class PBSServiceInstanceWrapper(dict):
     def __init__(self, *args, **kwargs):
         super(self.__class__, self).__init__(self, *args, **kwargs)
         self.orderedlist = super(self.__class__, self).keys()
+        print "ONE*****************************"
 
     def __setitem__(self, key, value):
         super(self.__class__, self).__setitem__(key, value)
@@ -460,7 +518,9 @@ class PBSTestSuite(unittest.TestCase):
     scheds = None
     moms = None
     comms = None
-    requirements_data = {}
+    requirements_data = {
+        'a': 1
+    }
 
     @classmethod
     def setUpClass(cls):
@@ -469,10 +529,10 @@ class PBSTestSuite(unittest.TestCase):
         cls.parse_param()
         cls.init_param()
         cls.check_users_exist()
-        cls.init_servers()
-        cls.init_comms()
-        cls.init_schedulers()
-        cls.init_moms()
+        #cls.init_servers()
+        #cls.init_comms()
+        #cls.init_schedulers()
+        #cls.init_moms()
         cls.log_end_setup(True)
 
     def setUp(self):
@@ -570,8 +630,12 @@ class PBSTestSuite(unittest.TestCase):
 
         ``Multi-property`` attributes are colon-delimited.
         """
+        print "IN parse_param ******************************************"
+        print cls.param
         if cls.param is None:
+            print "IN parse_param NONE  *************************************"
             return
+        print "IN parse_param present ***********************************"
         for h in cls.param.split(','):
             if '=' in h:
                 k, v = h.split('=')
@@ -1452,26 +1516,25 @@ class PBSTestSuite(unittest.TestCase):
 
         return True if validation succeeds else False if validation fails
         """
-        print "&&&&&&&&&&&&&&&&&&&&&&&&"
-        print self.requirements_data
-        print "&&&&&&&&&&&&&&&&&&&&&&&&"
-        servers_count = len(self.servers.values())
-        moms_count = len(self.moms.values())
-        comms_count = len(self.comms.values())
-        if (servers_count != self.requirements_data['num_servers'] or
-            moms_count != self.requirements_data['num_moms'] or
-            comms_count != self.requirements_data['num_comms']):
-            return False
-        if (self.server.hostname == self.mom.hostname and
-            self.requirements_dic.no_mom_on_server):
-            return False
-        if (self.server.hostname == self.comm.hostname and
-            self.requirements_dic.no_comm_on_server):
-            return False
-        if (self.mom.hostname == self.comm.hostname and
-            self.requirements_dic.no_comm_on_mom):
-            return False
-        return True
+        #print "&&&&&&&&&&&&&&&&&&&&&&&&"
+        #print self.requirements_data
+        #print "&&&&&&&&&&&&&&&&&&&&&&&&"
+        #print self.conf
+        #print "&&&&&&&&&&&&&&&&&&&&&&&&"
+        ptypes = ['servers', 'moms', 'comms', 'clients']
+        pcount = {
+            'servers': 1,
+            'moms': 1,
+            'comms': 1,
+            'clients': 1
+        }
+        for i in ptypes:
+            if i in self.conf:
+                pcount[i] = len(self.conf[i].split(':'))
+                print "SKH IN FOR *********************"
+        print pcount
+        #print "&&&&&&&&&&&&&&&&&&&&&&&&"
+        return False
 
     @classmethod
     def log_enter_teardown(cls, iscls=False):

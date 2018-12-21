@@ -57,6 +57,7 @@ from ptl.utils.plugins.ptl_test_db import PTLTestDb
 from ptl.utils.plugins.ptl_test_info import PTLTestInfo
 from ptl.utils.plugins.ptl_test_tags import PTLTestTags
 from ptl.utils.plugins.ptl_test_data import PTLTestData
+from ptl.utils.pbs_testsuite import PBSTestSuite
 
 
 # trap SIGINT and SIGPIPE
@@ -432,6 +433,10 @@ if __name__ == '__main__':
     if testsuites is None:
         testsuites = 'PBSTestSuite'
         follow = True
+
+    if (testparam is not None or paramfile is not None):
+        ptl.utils.pbs_testsuite.set_testparam(testparam, paramfile)
+        ptl.utils.pbs_testsuite.set_testparam_two()
 
     if only_info:
         testinfo = PTLTestInfo()

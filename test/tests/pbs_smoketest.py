@@ -55,6 +55,7 @@ class SmokeTest(PBSTestSuite):
     avail_resc_name = 'resources_available.' + resc_name
     pu = ProcUtils()
 
+    @requirements(num_moms=2)
     def test_submit_job(self):
         """
         Test to submit a job
@@ -62,8 +63,10 @@ class SmokeTest(PBSTestSuite):
         j = Job(TEST_USER)
         jid = self.server.submit(j)
         self.server.expect(JOB, {'job_state': 'R'}, id=jid)
+        print self.param
 
-    @skipOnCpuSet
+    #@skipOnCpuSet
+    @skip("SKH SKH SKH SKH")
     def test_submit_job_array(self):
         """
         Test to submit a job array
