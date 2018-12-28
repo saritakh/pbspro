@@ -222,6 +222,29 @@ def skipOnCpuSet(function):
     wrapper.__name__ = function.__name__
     return wrapper
 
+def validate_requirements(self):
+    """
+    Validates test steup with the requirements decorator parameters
+    which are validated against the test configuration parameters
+    passed in '-p' or 'param_file'
+
+    return True if validation succeeds else False if validation fails
+    """
+    ptypes = ['servers', 'moms', 'comms', 'clients']
+    pcount = {
+        'servers': 1,
+        'moms': 1,
+        'comms': 1,
+        'clients': 1
+    }
+    #for i in ptypes:
+    #    if i in self.conf:
+    #        pcount[i] = len(self.conf[i].split(':'))
+    #        print "SKH IN FOR *********************"
+    print pcount
+    print "&&&&&&&&&&&&&&&&&&&&&&&&"
+    return False
+
 
 #def requirements(num_servers=1, num_moms=1, num_comms=1, num_clients=1,
 #             no_mom_on_server=False, no_comm_on_server=False,
@@ -236,49 +259,61 @@ def requirements(*args, **kwargs):
     skip_flag = True
     reason = "Skipped test execution"
     req_data = {}
-    #    'num_servers': num_servers,
-    #    'num_moms': num_moms,
-    #    'num_comms': num_comms,
-    #    'num_clients': num_clients,
-    #    'no_mom_on_server': no_mom_on_server,
-    #    'no_comm_on_server': no_comm_on_server,
-    #    'no_comm_on_mom': no_comm_on_mom
-    #}
-    clusterparam = ['num_servers','num_moms','num_comms','num_clients','no_mom_on_server','no_comm_on_server']
-    def wrap_obj(test_item):
-        #print req_data
-        print "wrapper SKHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
-        #print args
-        #print "wrapper SKHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
-        print kwargs
-        reqobj = getattr(test_item, REQTKEY, [])
-        print reqobj
+    clusterparam = {
+        'num_servers': 0,
+        'num_moms': 1,
+        'num_comms': 1,
+        'num_clients': 1,
+        'no_mom_on_server': 'False',
+        'no_comm_on_server': 'False',
+        'no_comm_on_mom': 'True'
+    }
+    def wrap_obj(function):
+        print "wrap_obj SKHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
         for name, value in kwargs.items():
-            #print name
-            #print value
             if name not in clusterparam:
                 print "INVALIDDDDDDDDDDDDDDDD"
                 #raise setUpClassError("Invalid clusterinfo parameter")
             req_data[name] = value
         print req_data
-        #for name, value in kwargs.iteritems():
-        #    if name not in clusterparam:
-        #       raise setUpClassError("Invalid clusterinfo parameter")
-        #    print name
-        #    print value
-        #    #reqobj.append('%s=%s' % (name, value))
-        #    #setattr(test_item, name, value)
-        #setattr(test_item, REQUIREMENTS, dict(req_data))
-        #test_item.validate_requirements()
-        #gat = getattr(test_item.test, param, None)
-        #print gat
-        #print test_item.param
-        mycondition = True
-        if mycondition:
-            test_item.__unittest_skip__ = skip_flag
-            test_item.__unittest_skip_why__ = reason
-        return test_item
+        #function.validate_requirements()
+        print PBSTestSuite.param
+        st_param = PBSTestSuite.param
+        pcount = {
+            'servers': 0,
+            'moms': 1,
+            'comms': 1,
+            'clients': 1
+        }
+        print pcount
+
+        if st_param is None and len(req_data):
+            print "SKH =========== No -p given"
+            myskipcondition = True
+        else:
+            for h in st_param.split(','):
+                if '=' in h:
+                    k, v = h.split('=')
+                    if k in pcount:
+                        pcount[k] = len(v.split(':'))
+                         
+        print "Count of cluster"
+        print pcount
+        print "SKH =========== given"
+        #print "Return Value : %d" %  cmp (req_data, pcount)
+        if cmp (req_data, pcount) != 0:
+            myskipcondition = True
+
+        #myskipcondition = True
+        #myskipcondition = False
+        if myskipcondition:
+            #print "In my condition ----------------"
+            function.__unittest_skip__ = skip_flag
+            function.__unittest_skip_why__ = reason
+        return function
     return wrap_obj
+
+
 
 def set_testparam(testparam=None, paramfile=None):
     print "inside set_testparam%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
@@ -299,13 +334,9 @@ def set_testparam(testparam=None, paramfile=None):
             testparam = _f
         
     TEST_PARAM = testparam
-    print TEST_PARAM
+    #print TEST_PARAM
     PBSTestSuite.param = TEST_PARAM
     #print "TEST_PARAM=%s" % TEST_PARAM
-
-def set_testparam_two():
-    print "inside set_testparam_two"
-    print "######################################################3"
 
 class PBSServiceInstanceWrapper(dict):
 
@@ -630,12 +661,9 @@ class PBSTestSuite(unittest.TestCase):
 
         ``Multi-property`` attributes are colon-delimited.
         """
-        print "IN parse_param ******************************************"
         print cls.param
         if cls.param is None:
-            print "IN parse_param NONE  *************************************"
             return
-        print "IN parse_param present ***********************************"
         for h in cls.param.split(','):
             if '=' in h:
                 k, v = h.split('=')
@@ -1507,34 +1535,6 @@ class PBSTestSuite(unittest.TestCase):
         raise SkipTest(reason)
 
     skip_test = skipTest
-
-    def validate_requirements(self):
-        """
-        Validates test steup with the requirements decorator parameters
-        which are validated against the test configuration parameters
-        passed in '-p' or 'param_file'
-
-        return True if validation succeeds else False if validation fails
-        """
-        #print "&&&&&&&&&&&&&&&&&&&&&&&&"
-        #print self.requirements_data
-        #print "&&&&&&&&&&&&&&&&&&&&&&&&"
-        #print self.conf
-        #print "&&&&&&&&&&&&&&&&&&&&&&&&"
-        ptypes = ['servers', 'moms', 'comms', 'clients']
-        pcount = {
-            'servers': 1,
-            'moms': 1,
-            'comms': 1,
-            'clients': 1
-        }
-        for i in ptypes:
-            if i in self.conf:
-                pcount[i] = len(self.conf[i].split(':'))
-                print "SKH IN FOR *********************"
-        print pcount
-        #print "&&&&&&&&&&&&&&&&&&&&&&&&"
-        return False
 
     @classmethod
     def log_enter_teardown(cls, iscls=False):

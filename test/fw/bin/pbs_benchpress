@@ -436,7 +436,6 @@ if __name__ == '__main__':
 
     if (testparam is not None or paramfile is not None):
         ptl.utils.pbs_testsuite.set_testparam(testparam, paramfile)
-        ptl.utils.pbs_testsuite.set_testparam_two()
 
     if only_info:
         testinfo = PTLTestInfo()
