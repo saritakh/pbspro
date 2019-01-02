@@ -259,7 +259,7 @@ def requirements(*args, **kwargs):
     skip_flag = True
     reason = "Skipped test execution"
     req_data = {}
-    clusterparam = {
+    clusterparam_def = {
         'num_servers': 0,
         'num_moms': 1,
         'num_comms': 1,
@@ -270,21 +270,23 @@ def requirements(*args, **kwargs):
     }
     def wrap_obj(function):
         print "wrap_obj SKHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
+        myskipcondition = False
         for name, value in kwargs.items():
-            if name not in clusterparam:
+            if name not in clusterparam_def:
                 print "INVALIDDDDDDDDDDDDDDDD"
                 #raise setUpClassError("Invalid clusterinfo parameter")
             req_data[name] = value
         print req_data
-        #function.validate_requirements()
-        print PBSTestSuite.param
+        print "Got test case requirements deecorator data"
+        #print PBSTestSuite.param
         st_param = PBSTestSuite.param
         pcount = {
-            'servers': 0,
-            'moms': 1,
-            'comms': 1,
-            'clients': 1
+            'num_servers': 0,
+            'num_moms': 1,
+            'num_comms': 1,
+            'num_clients': 1
         }
+        ccount = {}
         print pcount
 
         if st_param is None and len(req_data):
@@ -295,17 +297,13 @@ def requirements(*args, **kwargs):
                 if '=' in h:
                     k, v = h.split('=')
                     if k in pcount:
-                        pcount[k] = len(v.split(':'))
+                        ccount[k] = len(v.split(':'))
+                    #else:
+                    #    ccount[k] = clusterparam[k]
                          
-        print "Count of cluster"
-        print pcount
-        print "SKH =========== given"
-        #print "Return Value : %d" %  cmp (req_data, pcount)
-        if cmp (req_data, pcount) != 0:
-            myskipcondition = True
+        print ccount
 
         #myskipcondition = True
-        #myskipcondition = False
         if myskipcondition:
             #print "In my condition ----------------"
             function.__unittest_skip__ = skip_flag
@@ -560,10 +558,10 @@ class PBSTestSuite(unittest.TestCase):
         cls.parse_param()
         cls.init_param()
         cls.check_users_exist()
-        #cls.init_servers()
-        #cls.init_comms()
-        #cls.init_schedulers()
-        #cls.init_moms()
+        cls.init_servers()
+        cls.init_comms()
+        cls.init_schedulers()
+        cls.init_moms()
         cls.log_end_setup(True)
 
     def setUp(self):
