@@ -231,7 +231,7 @@ def validate_requirements(self):
     return True if validation succeeds else False if validation fails
     """
     ptypes = ['servers', 'moms', 'comms', 'clients']
-    pcount = {
+    dcount = {
         'servers': 1,
         'moms': 1,
         'comms': 1,
@@ -239,26 +239,29 @@ def validate_requirements(self):
     }
     #for i in ptypes:
     #    if i in self.conf:
-    #        pcount[i] = len(self.conf[i].split(':'))
+    #        dcount[i] = len(self.conf[i].split(':'))
     #        print "SKH IN FOR *********************"
-    print pcount
+    print dcount
     print "&&&&&&&&&&&&&&&&&&&&&&&&"
     return False
 
 
-#def requirements(num_servers=1, num_moms=1, num_comms=1, num_clients=1,
-#             no_mom_on_server=False, no_comm_on_server=False,
-#             no_comm_on_mom=True):
 def requirements(*args, **kwargs):
     """
-    Unconditionally skip a test.
+    Provides test cluster requirements for a test.
 
-    :param reason: Reason for the skip
-    :type reason: str or None
+    :param num_servers: Number of servers needed to run test
+    :type num_servers: int
+    :param num_moms: Number of moms needed to run test
+    :type num_moms: int
+    :param num_comms: Number of comms needed to run test
+    :type num_comms: int
+    :param num_clients: Number of clients needed to run test
+    :type num_clients: int
+
+    :returns test object received
     """
-    skip_flag = True
-    reason = "Skipped test execution"
-    req_data = {}
+    reason = "Skipped test due to unmatched test cluster"
     clusterparam_def = {
         'num_servers': 0,
         'num_moms': 1,
@@ -268,45 +271,64 @@ def requirements(*args, **kwargs):
         'no_comm_on_server': 'False',
         'no_comm_on_mom': 'True'
     }
+    req_data = {}
     def wrap_obj(function):
         print "wrap_obj SKHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
-        myskipcondition = False
         for name, value in kwargs.items():
             if name not in clusterparam_def:
                 print "INVALIDDDDDDDDDDDDDDDD"
-                #raise setUpClassError("Invalid clusterinfo parameter")
+                _msg = 'Invalid requirements specified'
+                skip(_msg)
+                #function.__unittest_skip__ = True
+                #function.__unittest_skip_why__ = reason
+                #return function
             req_data[name] = value
+        for l in clusterparam_def:
+            if l not in req_data:
+                req_data[l] = clusterparam_def[l]
         print req_data
         print "Got test case requirements deecorator data"
-        #print PBSTestSuite.param
         st_param = PBSTestSuite.param
-        pcount = {
+        dcount = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
+        ccount = {}
+        pccount = {
             'num_servers': 0,
             'num_moms': 1,
             'num_comms': 1,
-            'num_clients': 1
+            'num_clients': 1,
+            'no_mom_on_server': 'False',
+            'no_comm_on_server': 'False',
+            'no_comm_on_mom': 'True'
         }
-        ccount = {}
-        print pcount
-
         if st_param is None and len(req_data):
             print "SKH =========== No -p given"
-            myskipcondition = True
+            _msg = "No -p given"
+            skip(_msg)
+            #function.__unittest_skip__ = True
+            #function.__unittest_skip_why__ = reason
+            #return function
         else:
             for h in st_param.split(','):
                 if '=' in h:
                     k, v = h.split('=')
-                    if k in pcount:
+                    if k in dcount:
                         ccount[k] = len(v.split(':'))
-                    #else:
-                    #    ccount[k] = clusterparam[k]
-                         
-        print ccount
+                        if (k == 'server' or k == 'servers'):
+                            pccount['num_servers'] += 1
+                        if (k == 'mom' or k == 'moms'):
+                            pccount['num_moms'] += 1
+                        if k == 'comms':
+                            pccount['num_comms'] += 1
+                        if k == 'clients':
+                            pccount['num_clients'] += 1
+        print "req_data is"
+        print req_data
+        print "pccount is"
+        print pccount
+        print cmp(req_data, pccount)
 
-        #myskipcondition = True
-        if myskipcondition:
-            #print "In my condition ----------------"
-            function.__unittest_skip__ = skip_flag
+        if cmp(req_data, pccount):
+            function.__unittest_skip__ = True
             function.__unittest_skip_why__ = reason
         return function
     return wrap_obj
@@ -1568,3 +1590,4 @@ class PBSTestSuite(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls._testMethodName = 'tearDownClass'
+
