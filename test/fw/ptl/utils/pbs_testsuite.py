@@ -242,7 +242,7 @@ def validate_requirements(self):
     #        dcount[i] = len(self.conf[i].split(':'))
     #        print "SKH IN FOR *********************"
     print dcount
-    print "&&&&&&&&&&&&&&&&&&&&&&&&"
+    #print "&&&&&&&&&&&&&&&&&&&&&&&&"
     return False
 
 
@@ -271,66 +271,25 @@ def requirements(*args, **kwargs):
         'no_comm_on_server': 'False',
         'no_comm_on_mom': 'True'
     }
-    req_data = {}
-    def wrap_obj(function):
-        print "wrap_obj SKHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
+    reqobj = {}
+    def wrap_obj(test_item):
+        reqobj = getattr(test_item, REQUIREMENTS_KEY, {})
         for name, value in kwargs.items():
             if name not in clusterparam_def:
-                print "INVALIDDDDDDDDDDDDDDDD"
+                #print "INVALIDDDDDDDDDDDDDDDD"
+                #Error handling needs to be done
                 _msg = 'Invalid requirements specified'
-                skip(_msg)
-                #function.__unittest_skip__ = True
-                #function.__unittest_skip_why__ = reason
-                #return function
-            req_data[name] = value
+                #skip(_msg)
+            reqobj[name] = value
         for l in clusterparam_def:
-            if l not in req_data:
-                req_data[l] = clusterparam_def[l]
-        print req_data
-        print "Got test case requirements deecorator data"
-        st_param = PBSTestSuite.param
-        dcount = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
-        ccount = {}
-        pccount = {
-            'num_servers': 0,
-            'num_moms': 1,
-            'num_comms': 1,
-            'num_clients': 1,
-            'no_mom_on_server': 'False',
-            'no_comm_on_server': 'False',
-            'no_comm_on_mom': 'True'
-        }
-        if st_param is None and len(req_data):
-            print "SKH =========== No -p given"
-            _msg = "No -p given"
-            skip(_msg)
-            #function.__unittest_skip__ = True
-            #function.__unittest_skip_why__ = reason
-            #return function
-        else:
-            for h in st_param.split(','):
-                if '=' in h:
-                    k, v = h.split('=')
-                    if k in dcount:
-                        ccount[k] = len(v.split(':'))
-                        if (k == 'server' or k == 'servers'):
-                            pccount['num_servers'] += 1
-                        if (k == 'mom' or k == 'moms'):
-                            pccount['num_moms'] += 1
-                        if k == 'comms':
-                            pccount['num_comms'] += 1
-                        if k == 'clients':
-                            pccount['num_clients'] += 1
-        print "req_data is"
-        print req_data
-        print "pccount is"
-        print pccount
-        print cmp(req_data, pccount)
-
-        if cmp(req_data, pccount):
-            function.__unittest_skip__ = True
-            function.__unittest_skip_why__ = reason
-        return function
+            if l not in reqobj:
+                reqobj[l] = clusterparam_def[l]
+        setattr(test_item, REQUIREMENTS_KEY, reqobj)
+        print "PBSTestSuite.param======================"
+        print PBSTestSuite.param
+        print "PBSTestSuite.dicparam======================"
+        print PBSTestSuite.dicparam
+        return test_item
     return wrap_obj
 
 
@@ -353,10 +312,32 @@ def set_testparam(testparam=None, paramfile=None):
         else:
             testparam = _f
         
-    TEST_PARAM = testparam
-    #print TEST_PARAM
-    PBSTestSuite.param = TEST_PARAM
-    #print "TEST_PARAM=%s" % TEST_PARAM
+    dcount = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
+    pccount = {
+        'num_servers': 0,
+        'num_moms': 1,
+        'num_comms': 1,
+        'num_clients': 1,
+        'no_mom_on_server': 'False',
+        'no_comm_on_server': 'False',
+        'no_comm_on_mom': 'True'
+    }
+    for h in testparam.split(','):
+        if '=' in h:
+            k, v = h.split('=')
+            if k in dcount:
+                if (k == 'server' or k == 'servers'):
+                    pccount['num_servers'] = len(v.split(':'))
+                if (k == 'mom' or k == 'moms'):
+                    pccount['num_moms'] = len(v.split(':'))
+                if k == 'comms':
+                    pccount['num_comms'] = len(v.split(':'))
+                if k == 'clients':
+                    pccount['num_clients'] = len(v.split(':'))
+
+    PBSTestSuite.param = testparam
+    PBSTestSuite.dicparam = pccount
+    
 
 class PBSServiceInstanceWrapper(dict):
 
@@ -546,6 +527,7 @@ class PBSTestSuite(unittest.TestCase):
     additional_data = {}
     conf = {}
     param = None
+    dicparam = {}
     du = DshUtils()
     _procmon = None
     _process_monitoring = False
@@ -585,6 +567,7 @@ class PBSTestSuite(unittest.TestCase):
         cls.init_schedulers()
         cls.init_moms()
         cls.log_end_setup(True)
+        
 
     def setUp(self):
         if 'skip-setup' in self.conf:
@@ -681,6 +664,7 @@ class PBSTestSuite(unittest.TestCase):
 
         ``Multi-property`` attributes are colon-delimited.
         """
+        print "parse_param*****************************"
         print cls.param
         if cls.param is None:
             return

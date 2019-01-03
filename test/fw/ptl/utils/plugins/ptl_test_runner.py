@@ -56,6 +56,7 @@ from nose.plugins.skip import SkipTest
 from nose.suite import ContextSuite
 from ptl.utils.pbs_testsuite import PBSTestSuite
 from ptl.utils.pbs_testsuite import TIMEOUT_KEY
+from ptl.utils.pbs_testsuite import REQUIREMENTS_KEY
 from ptl.utils.pbs_dshutils import DshUtils
 from ptl.lib.pbs_testlib import PBSInitServices
 from ptl.utils.pbs_covutils import LcovUtils
@@ -717,3 +718,35 @@ class PTLTestRunner(Plugin):
             self.lcov_utils.change_baseurl()
             self.logger.info('\n'.join(self.lcov_utils.summarize_coverage()))
         self._cleanup()
+
+    def is_test_cluster_matching(self, reqt=None, clust=None):
+        """
+        Validates test requirements against test cluster information
+        returns True on match or False otherwise
+        """
+        if (reqt is not None and clust is not None):
+            rv = cmp(reqt, clust)
+        return rv
+
+    def wantMethod(self, method):
+        """
+        Accept the method if its tags match.
+        """
+        print "In WantMethod now __________"
+        try:
+            cls = method.im_class
+        except AttributeError:
+            return False
+        rcc = getattr(method, REQUIREMENTS_KEY, {})
+        print "GOTTTTTTT rcc"
+        print rcc
+        rcdic = PBSTestSuite.dicparam
+        print "GOTTTTTTT rcdic"
+        print rcdic
+        rv = self.is_test_cluster_matching(rcc, rcdic)
+        #if rv is None:
+        #    cname = cls.__name__
+        #    if cname not in self.matched.keys():
+        #        self.matched[cname] = []
+        #    self.matched[cname].append(method.__name__)
+        return True
