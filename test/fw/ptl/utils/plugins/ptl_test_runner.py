@@ -724,13 +724,18 @@ class PTLTestRunner(Plugin):
         Validates test requirements against test cluster information
         returns True on match or False otherwise
         """
+        rv = True
         if (reqt is not None and clust is not None):
-            rv = cmp(reqt, clust)
+            #rv = cmp(reqt, clust)
+            mn = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
+            for k in mn:
+                if clust[k] < reqt[k]:
+                    rv = False
         return rv
 
     def wantMethod(self, method):
         """
-        Accept the method if its tags match.
+        Accept the method if its cluster matches requirements.
         """
         print "In WantMethod now __________"
         try:
@@ -744,7 +749,8 @@ class PTLTestRunner(Plugin):
         print "GOTTTTTTT rcdic"
         print rcdic
         rv = self.is_test_cluster_matching(rcc, rcdic)
-        #if rv is None:
+        if not rv:
+            print "ENTERED FALSE CONDITION"
         #    cname = cls.__name__
         #    if cname not in self.matched.keys():
         #        self.matched[cname] = []
