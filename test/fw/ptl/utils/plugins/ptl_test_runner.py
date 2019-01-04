@@ -743,11 +743,7 @@ class PTLTestRunner(Plugin):
         except AttributeError:
             return False
         rcc = getattr(method, REQUIREMENTS_KEY, {})
-        print "GOTTTTTTT rcc"
-        print rcc
         rcdic = PBSTestSuite.dicparam
-        print "GOTTTTTTT rcdic"
-        print rcdic
         rv = self.is_test_cluster_matching(rcc, rcdic)
         if not rv:
             print "ENTERED FALSE CONDITION"

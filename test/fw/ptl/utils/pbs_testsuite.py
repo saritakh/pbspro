@@ -222,30 +222,6 @@ def skipOnCpuSet(function):
     wrapper.__name__ = function.__name__
     return wrapper
 
-def validate_requirements(self):
-    """
-    Validates test steup with the requirements decorator parameters
-    which are validated against the test configuration parameters
-    passed in '-p' or 'param_file'
-
-    return True if validation succeeds else False if validation fails
-    """
-    ptypes = ['servers', 'moms', 'comms', 'clients']
-    dcount = {
-        'servers': 1,
-        'moms': 1,
-        'comms': 1,
-        'clients': 1
-    }
-    #for i in ptypes:
-    #    if i in self.conf:
-    #        dcount[i] = len(self.conf[i].split(':'))
-    #        print "SKH IN FOR *********************"
-    print dcount
-    #print "&&&&&&&&&&&&&&&&&&&&&&&&"
-    return False
-
-
 def requirements(*args, **kwargs):
     """
     Provides test cluster requirements for a test.
@@ -276,7 +252,6 @@ def requirements(*args, **kwargs):
         reqobj = getattr(test_item, REQUIREMENTS_KEY, {})
         for name, value in kwargs.items():
             if name not in clusterparam_def:
-                #print "INVALIDDDDDDDDDDDDDDDD"
                 #Error handling needs to be done
                 _msg = 'Invalid requirements specified'
                 #skip(_msg)
@@ -295,7 +270,6 @@ def requirements(*args, **kwargs):
 
 
 def set_testparam(testparam=None, paramfile=None):
-    print "inside set_testparam%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
     if paramfile is not None:
         _pf = open(paramfile, 'r')
         _params_from_file = _pf.readlines()
@@ -311,7 +285,6 @@ def set_testparam(testparam=None, paramfile=None):
             testparam += ',' + _f
         else:
             testparam = _f
-        
     dcount = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
     pccount = {
         'num_servers': 0,
@@ -334,7 +307,6 @@ def set_testparam(testparam=None, paramfile=None):
                     pccount['num_comms'] = len(v.split(':'))
                 if k == 'clients':
                     pccount['num_clients'] = len(v.split(':'))
-
     PBSTestSuite.param = testparam
     PBSTestSuite.dicparam = pccount
     
@@ -361,7 +333,6 @@ class PBSServiceInstanceWrapper(dict):
     def __init__(self, *args, **kwargs):
         super(self.__class__, self).__init__(self, *args, **kwargs)
         self.orderedlist = super(self.__class__, self).keys()
-        print "ONE*****************************"
 
     def __setitem__(self, key, value):
         super(self.__class__, self).__setitem__(key, value)
@@ -551,9 +522,6 @@ class PBSTestSuite(unittest.TestCase):
     scheds = None
     moms = None
     comms = None
-    requirements_data = {
-        'a': 1
-    }
 
     @classmethod
     def setUpClass(cls):
@@ -567,7 +535,6 @@ class PBSTestSuite(unittest.TestCase):
         cls.init_schedulers()
         cls.init_moms()
         cls.log_end_setup(True)
-        
 
     def setUp(self):
         if 'skip-setup' in self.conf:
@@ -664,8 +631,6 @@ class PBSTestSuite(unittest.TestCase):
 
         ``Multi-property`` attributes are colon-delimited.
         """
-        print "parse_param*****************************"
-        print cls.param
         if cls.param is None:
             return
         for h in cls.param.split(','):
@@ -1529,7 +1494,7 @@ class PBSTestSuite(unittest.TestCase):
         """
         Skip Test
 
-        :param reason: number of servers present in test cluster
+        :param reason: message to indicate why test is skipped
         :type reason: str or None
         """
         if reason:
@@ -1574,4 +1539,3 @@ class PBSTestSuite(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls._testMethodName = 'tearDownClass'
-
