@@ -65,8 +65,8 @@ def requirements(*args, **kwargs):
 
 def get_req_value(method, cls, req_name, default=False):
     """
-    Look up an tag on a ``method/function``.
-    If the tag isn't found there, looking it up in the
+    Look up requirements on a ``method/function``.
+    If requirements are not found there, looking it up in the
     method's class, if any.
     """
     Missing = object()
@@ -94,48 +94,48 @@ def get_req_value(method, cls, req_name, default=False):
 #        return get_tag_value(self.method, self.cls, name)
 
 
-class FakeRunner(object):
+#class FakeRunner(object):
 
-    def __init__(self, matched, tags_list, list_tags, verbose):
-        self.matched = matched
-        self.tags_list = tags_list
-        self.list_tags = list_tags
-        self.verbose = verbose
+#    def __init__(self, matched, tags_list, list_tags, verbose):
+#        self.matched = matched
+#        self.tags_list = tags_list
+#        self.list_tags = list_tags
+#        self.verbose = verbose
 
-    def run(self, test):
-        if self.list_tags:
-            print '\n'.join(sorted(set(self.tags_list)))
-            sys.exit(0)
-        suites = sorted(set(self.matched.keys()))
-        if not self.verbose:
-            print '\n'.join(suites)
-        else:
-            for k in suites:
-                v = sorted(set(self.matched[k]))
-                for _v in v:
-                    print k + '.' + _v
-        sys.exit(0)
+#    def run(self, test):
+#        if self.list_tags:
+#            print '\n'.join(sorted(set(self.tags_list)))
+#            sys.exit(0)
+#        suites = sorted(set(self.matched.keys()))
+#        if not self.verbose:
+#            print '\n'.join(suites)
+#        else:
+#            for k in suites:
+#                v = sorted(set(self.matched[k]))
+#                for _v in v:
+#                    print k + '.' + _v
+#        sys.exit(0)
 
 
-class PTLTestTags(Plugin):
+class PTLTestReqts(Plugin):
 
     """
     Load test cases from given parameter
     """
     name = 'PTLTestTags'
-    score = sys.maxint - 3
+    score = sys.maxint - 7
     logger = logging.getLogger(__name__)
     tags_list = []
 
     def __init__(self):
         Plugin.__init__(self)
-        self.tags_to_check = []
-        self.tags = []
-        self.eval_tags = []
-        self.tags_info = False
-        self.list_tags = False
-        self.verbose = False
-        self.matched = {}
+        #self.tags_to_check = []
+        #self.tags = []
+        #self.eval_tags = []
+        #self.tags_info = False
+        #self.list_tags = False
+        #self.verbose = False
+        #self.matched = {}
         self._test_marker = 'test_'
 
     def options(self, parser, env):
@@ -144,13 +144,13 @@ class PTLTestTags(Plugin):
         """
         pass
 
-    def set_data(self, tags, eval_tags, tags_info=False, list_tags=False,
-                 verbose=False):
-        self.tags.extend(tags)
-        self.eval_tags.extend(eval_tags)
-        self.tags_info = tags_info
-        self.list_tags = list_tags
-        self.verbose = verbose
+    def set_data(self, paramfile=None, testparam=None):
+        #self.tags.extend(tags)
+        #self.eval_tags.extend(eval_tags)
+        #self.tags_info = tags_info
+        #self.list_tags = list_tags
+        #self.verbose = verbose
+        x = 0
 
     def configure(self, options, config):
         """
@@ -163,74 +163,76 @@ class PTLTestTags(Plugin):
         match.
         """
         self.tags_to_check = []
-        for tag in self.eval_tags:
-            def eval_in_context(expr, obj, cls):
-                return eval(expr, None, EvalHelper(obj, cls))
-            self.tags_to_check.append([(tag, eval_in_context)])
-        for tags in self.tags:
-            tag_group = []
-            for tag in tags.strip().split(','):
-                if not tag:
-                    continue
-                items = tag.split('=', 1)
-                if len(items) > 1:
-                    key, value = items
-                else:
-                    key = items[0]
-                    if key[0] == '!':
-                        key = key[1:]
-                        value = False
-                    else:
-                        value = True
-                tag_group.append((key, value))
-            self.tags_to_check.append(tag_group)
-        if (len(self.tags_to_check) > 0) or self.list_tags:
-            self.enabled = True
+        #for tag in self.eval_tags:
+        #    def eval_in_context(expr, obj, cls):
+        #        return eval(expr, None, EvalHelper(obj, cls))
+        #    self.tags_to_check.append([(tag, eval_in_context)])
+        #for tags in self.tags:
+        #    tag_group = []
+        #    for tag in tags.strip().split(','):
+        #        if not tag:
+        #            continue
+        #        items = tag.split('=', 1)
+        #        if len(items) > 1:
+        #            key, value = items
+        #        else:
+        #            key = items[0]
+        #            if key[0] == '!':
+        #                key = key[1:]
+        #                value = False
+        #            else:
+        #                value = True
+        #        tag_group.append((key, value))
+        #    self.tags_to_check.append(tag_group)
+        #if (len(self.tags_to_check) > 0) or self.list_tags:
+        #    self.enabled = True
+        self.config = config
+        self.enabled = True
 
-    def is_tags_matching(self, method, cls=None):
-        """
-        Verify whether a method has the required tags
-        The method is considered a match if it matches all tags
-        for any tag group.
-        """
-        any_matched = False
-        for group in self.tags_to_check:
-            group_matched = True
-            for key, value in group:
-                tag_value = get_tag_value(method, cls, key)
-                if callable(value):
-                    if not value(key, method, cls):
-                        group_matched = False
-                        break
-                elif value is True:
-                    if not bool(tag_value):
-                        group_matched = False
-                        break
-                elif value is False:
-                    if bool(tag_value):
-                        group_matched = False
-                        break
-                elif type(tag_value) in (list, tuple):
-                    value = str(value).lower()
-                    if value not in [str(x).lower() for x in tag_value]:
-                        group_matched = False
-                        break
-                else:
-                    if ((value != tag_value) and
-                            (str(value).lower() != str(tag_value).lower())):
-                        group_matched = False
-                        break
-            any_matched = any_matched or group_matched
-        if not any_matched:
-            return False
+    #def is_tags_matching(self, method, cls=None):
+    #    """
+    #    Verify whether a method has the required tags
+    #    The method is considered a match if it matches all tags
+    #    for any tag group.
+    #    """
+    #    any_matched = False
+    #    for group in self.tags_to_check:
+    #        group_matched = True
+    #        for key, value in group:
+    #            tag_value = get_tag_value(method, cls, key)
+    #            if callable(value):
+    #                if not value(key, method, cls):
+    #                    group_matched = False
+    #                    break
+    #            elif value is True:
+    #                if not bool(tag_value):
+    #                    group_matched = False
+    #                    break
+    #            elif value is False:
+    #                if bool(tag_value):
+    #                    group_matched = False
+    #                    break
+    #            elif type(tag_value) in (list, tuple):
+    #                value = str(value).lower()
+    #                if value not in [str(x).lower() for x in tag_value]:
+    #                    group_matched = False
+    #                    break
+    #            else:
+    #                if ((value != tag_value) and
+    #                        (str(value).lower() != str(tag_value).lower())):
+    #                    group_matched = False
+    #                    break
+    #        any_matched = any_matched or group_matched
+    #    if not any_matched:
+    #        return False
 
-    def prepareTestRunner(self, runner):
-        """
-        Prepare test runner
-        """
-        if (self.tags_info or self.list_tags):
-            return FakeRunner(self.matched, self.tags_list, self.list_tags,
-                              self.verbose)
+    #def prepareTestRunner(self, runner):
+    #    """
+    #    Prepare test runner
+    #    """
+    #    if (self.tags_info or self.list_tags):
+    #        return FakeRunner(self.matched, self.tags_list, self.list_tags,
+    #                          self.verbose)
 
     def wantClass(self, cls):
         """
