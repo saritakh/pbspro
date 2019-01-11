@@ -39,6 +39,7 @@ import sys
 import logging
 import unittest
 from nose.plugins.base import Plugin
+from nose.plugins.skip import SkipTest
 
 log = logging.getLogger('nose.plugins.PTLTestReqs')
 
@@ -49,93 +50,48 @@ def requirements(*args, **kwargs):
     """
     Decorator that adds tags to classes or functions or methods
     """
+    clusterparam_def = {
+        'num_servers': 0,
+        'num_moms': 1,
+        'num_comms': 1,
+        'num_clients': 1,
+        'no_mom_on_server': 'False',
+        'no_comm_on_server': 'False',
+        'no_comm_on_mom': 'True'
+    }
+    reqobj = {}
     def wrap_obj(obj):
-        reqobj = getattr(obj, REQKEY, [])
-        for name in args:
-            reqobj.append(name)
-            PTLTestReqs.reqs_list.append(name)
-            setattr(obj, name, True)
+        reqobj = getattr(obj, REQKEY, {})
+        for name, value in kwargs.items():
+            if name not in clusterparam_def:
+                #Error handling needs to be done
+                _msg = 'Invalid requirements specified'
+                #skip(_msg)
+                print "Invalid requirements........"
         for name, value in kwargs.iteritems():
-            reqobj.append('%s=%s' % (name, value))
-            PTLTestReqs.reqs_list.append(name)
-            setattr(obj, name, value)
-        setattr(obj, REQKEY, sorted(set(reqobj)))
+            #setattr(obj, name, value)
+            reqobj[name] = value
+        for l in clusterparam_def:
+            if l not in reqobj:
+                reqobj[l] = clusterparam_def[l]
+        setattr(obj, REQKEY, reqobj)
         return obj
     return wrap_obj
 
-def get_req_value(method, cls, req_name, default=False):
-    """
-    Look up requirements on a ``method/function``.
-    If requirements are not found there, looking it up in the
-    method's class, if any.
-    """
-    Missing = object()
-    value = getattr(method, req_name, Missing)
-    if value is Missing and cls is not None:
-        value = getattr(cls, req_name, Missing)
-    if value is Missing:
-        return default
-    return value
 
-#########################################################
-
-#class EvalHelper(object):
-#
-#    """
-#    Object that can act as context dictionary for eval and looks up
-#    names as attributes on a method/function and its class.
-#    """
-
-#    def __init__(self, method, cls):
-#        self.method = method
-#        self.cls = cls
-
-#    def __getitem__(self, name):
-#        return get_tag_value(self.method, self.cls, name)
-
-
-#class FakeRunner(object):
-
-#    def __init__(self, matched, tags_list, list_tags, verbose):
-#        self.matched = matched
-#        self.tags_list = tags_list
-#        self.list_tags = list_tags
-#        self.verbose = verbose
-
-#    def run(self, test):
-#        if self.list_tags:
-#            print '\n'.join(sorted(set(self.tags_list)))
-#            sys.exit(0)
-#        suites = sorted(set(self.matched.keys()))
-#        if not self.verbose:
-#            print '\n'.join(suites)
-#        else:
-#            for k in suites:
-#                v = sorted(set(self.matched[k]))
-#                for _v in v:
-#                    print k + '.' + _v
-#        sys.exit(0)
-
-
-class PTLTestReqts(Plugin):
+class PTLTestReqs(Plugin):
 
     """
     Load test cases from given parameter
     """
-    name = 'PTLTestTags'
+    name = 'PTLTestReqs'
     score = sys.maxint - 7
+    enabled = True
     logger = logging.getLogger(__name__)
-    tags_list = []
 
     def __init__(self):
         Plugin.__init__(self)
-        #self.tags_to_check = []
-        #self.tags = []
-        #self.eval_tags = []
-        #self.tags_info = False
-        #self.list_tags = False
-        #self.verbose = False
-        #self.matched = {}
+        self.reqts = {}
         self._test_marker = 'test_'
 
     def options(self, parser, env):
@@ -145,12 +101,45 @@ class PTLTestReqts(Plugin):
         pass
 
     def set_data(self, paramfile=None, testparam=None):
-        #self.tags.extend(tags)
-        #self.eval_tags.extend(eval_tags)
-        #self.tags_info = tags_info
-        #self.list_tags = list_tags
-        #self.verbose = verbose
-        x = 0
+        tparam = ""
+        if paramfile is not None:
+            _pf = open(paramfile, 'r')
+            _params_from_file = _pf.readlines()
+            _pf.close()
+            _nparams = []
+            for l in range(len(_params_from_file)):
+                if _params_from_file[l].startswith('#'):
+                    continue
+                else:
+                    _nparams.append(_params_from_file[l])
+            _f = ','.join(map(lambda l: l.strip('\r\n'), _nparams))
+            if testparam is not None:
+                tparam = testparam + ',' + _f
+            else:
+                tparam = _f
+        dcount = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
+        pccount = {
+            'num_servers': 0,
+            'num_moms': 1,
+            'num_comms': 1,
+            'num_clients': 1,
+            'no_mom_on_server': 'False',
+            'no_comm_on_server': 'False',
+            'no_comm_on_mom': 'True'
+        }
+        for h in tparam.split(','):
+            if '=' in h:
+                k, v = h.split('=')
+                if k in dcount:
+                    if (k == 'server' or k == 'servers'):
+                        pccount['num_servers'] = len(v.split(':'))
+                    if (k == 'mom' or k == 'moms'):
+                        pccount['num_moms'] = len(v.split(':'))
+                    if k == 'comms':
+                        pccount['num_comms'] = len(v.split(':'))
+                    if k == 'clients':
+                        pccount['num_clients'] = len(v.split(':'))
+        self.reqts = pccount
 
     def configure(self, options, config):
         """
@@ -163,76 +152,8 @@ class PTLTestReqts(Plugin):
         match.
         """
         self.tags_to_check = []
-        #for tag in self.eval_tags:
-        #    def eval_in_context(expr, obj, cls):
-        #        return eval(expr, None, EvalHelper(obj, cls))
-        #    self.tags_to_check.append([(tag, eval_in_context)])
-        #for tags in self.tags:
-        #    tag_group = []
-        #    for tag in tags.strip().split(','):
-        #        if not tag:
-        #            continue
-        #        items = tag.split('=', 1)
-        #        if len(items) > 1:
-        #            key, value = items
-        #        else:
-        #            key = items[0]
-        #            if key[0] == '!':
-        #                key = key[1:]
-        #                value = False
-        #            else:
-        #                value = True
-        #        tag_group.append((key, value))
-        #    self.tags_to_check.append(tag_group)
-        #if (len(self.tags_to_check) > 0) or self.list_tags:
-        #    self.enabled = True
         self.config = config
         self.enabled = True
-
-    #def is_tags_matching(self, method, cls=None):
-    #    """
-    #    Verify whether a method has the required tags
-    #    The method is considered a match if it matches all tags
-    #    for any tag group.
-    #    """
-    #    any_matched = False
-    #    for group in self.tags_to_check:
-    #        group_matched = True
-    #        for key, value in group:
-    #            tag_value = get_tag_value(method, cls, key)
-    #            if callable(value):
-    #                if not value(key, method, cls):
-    #                    group_matched = False
-    #                    break
-    #            elif value is True:
-    #                if not bool(tag_value):
-    #                    group_matched = False
-    #                    break
-    #            elif value is False:
-    #                if bool(tag_value):
-    #                    group_matched = False
-    #                    break
-    #            elif type(tag_value) in (list, tuple):
-    #                value = str(value).lower()
-    #                if value not in [str(x).lower() for x in tag_value]:
-    #                    group_matched = False
-    #                    break
-    #            else:
-    #                if ((value != tag_value) and
-    #                        (str(value).lower() != str(tag_value).lower())):
-    #                    group_matched = False
-    #                    break
-    #        any_matched = any_matched or group_matched
-    #    if not any_matched:
-    #        return False
-
-    #def prepareTestRunner(self, runner):
-    #    """
-    #    Prepare test runner
-    #    """
-    #    if (self.tags_info or self.list_tags):
-    #        return FakeRunner(self.matched, self.tags_list, self.list_tags,
-    #                          self.verbose)
 
     def wantClass(self, cls):
         """
@@ -261,9 +182,8 @@ class PTLTestReqts(Plugin):
         returns True on match or False otherwise
         """
         rv = True
+        mn = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
         if (reqt is not None and clust is not None):
-            #rv = cmp(reqt, clust)
-            mn = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
             for k in mn:
                 if clust[k] < reqt[k]:
                     rv = False
@@ -279,9 +199,18 @@ class PTLTestReqts(Plugin):
             return False
         if not method.__name__.startswith(self._test_marker):
             return False
-        rcc = getattr(method, REQUIREMENTS_KEY, {})
-        rcdic = PBSTestSuite.dicparam
-        rv = self.is_test_cluster_matching(rcc, rcdic)
-        if rv is None:
-            print "ENTERED FALSE CONDITION"
+        rcc = getattr(method, REQKEY, {})
+        print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        print rcc
+        print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        print self.reqts
+        print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        rv = self.is_test_cluster_matching(rcc, self.reqts)
+        if rv is False:
+            print "^^^^^^^^^^^^^^^^^^^^^ENTERED FALSE CONDITION"
+            #if isclass(err[0]) and issubclass(err[0], SkipTest):
+            #    status = 'SKIP'
+            #    status_data = 'Reason = %s' % (err[1])
+            #method.__unittest_skip__ = True
+            #method.__unittest_skip_why__ = "Cluster not matching!!!!"
         return True

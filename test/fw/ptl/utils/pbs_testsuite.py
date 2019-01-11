@@ -63,6 +63,8 @@ except ImportError:
     class SkipTest(Exception):
         pass
 
+from ptl.utils.plugins.ptl_test_reqs import requirements
+from ptl.utils.plugins.ptl_test_reqs import REQKEY
 
 # Test users/groups are expected to exist on the test systems
 # User running the tests and the test users should have passwordless sudo
@@ -221,52 +223,6 @@ def skipOnCpuSet(function):
     wrapper.__doc__ = function.__doc__
     wrapper.__name__ = function.__name__
     return wrapper
-
-#def requirements(*args, **kwargs):
-#    """
-#    Provides test cluster requirements for a test.
-#
-#    :param num_servers: Number of servers needed to run test
-#    :type num_servers: int
-#    :param num_moms: Number of moms needed to run test
-#    :type num_moms: int
-#    :param num_comms: Number of comms needed to run test
-#    :type num_comms: int
-#    :param num_clients: Number of clients needed to run test
-#    :type num_clients: int
-
-#    :returns test object received
-#    """
-#    reason = "Skipped test due to unmatched test cluster"
-#    clusterparam_def = {
-#        'num_servers': 0,
-#        'num_moms': 1,
-#        'num_comms': 1,
-#        'num_clients': 1,
-#        'no_mom_on_server': 'False',
-#        'no_comm_on_server': 'False',
-#        'no_comm_on_mom': 'True'
-#    }
-#    reqobj = {}
-#    def wrap_obj(test_item):
-#        reqobj = getattr(test_item, REQUIREMENTS_KEY, {})
-#        for name, value in kwargs.items():
-#            if name not in clusterparam_def:
-#                #Error handling needs to be done
-#                _msg = 'Invalid requirements specified'
-#                #skip(_msg)
-#            reqobj[name] = value
-#        for l in clusterparam_def:
-#            if l not in reqobj:
-#                reqobj[l] = clusterparam_def[l]
-#        setattr(test_item, REQUIREMENTS_KEY, reqobj)
-#        print "PBSTestSuite.param======================"
-#        print PBSTestSuite.param
-#        print "PBSTestSuite.dicparam======================"
-#        print PBSTestSuite.dicparam
-#        return test_item
-#    return wrap_obj
-
 
 
 def set_testparam(testparam=None, paramfile=None):
