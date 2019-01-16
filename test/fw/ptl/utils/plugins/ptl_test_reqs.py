@@ -48,9 +48,10 @@ REQKEY = '__PTL_REQS_LIST__'
 
 def requirements(*args, **kwargs):
     """
-    Decorator that adds tags to classes or functions or methods
+    Decorator to provide the cluster information required for a particular
+    testcase or testsuite.
     """
-    clusterparam_def = {
+    default_requirements = {
         'num_servers': 0,
         'num_moms': 1,
         'num_comms': 1,
@@ -59,21 +60,13 @@ def requirements(*args, **kwargs):
         'no_comm_on_server': 'False',
         'no_comm_on_mom': 'True'
     }
-    reqobj = {}
+    reqobj = default_requirements
     def wrap_obj(obj):
-        reqobj = getattr(obj, REQKEY, {})
-        for name, value in kwargs.items():
-            if name not in clusterparam_def:
-                #Error handling needs to be done
-                _msg = 'Invalid requirements specified'
-                #skip(_msg)
-                print "Invalid requirements........"
+        getreq = getattr(obj, REQKEY, {})
+        if getreq:
+            reqobj.update(getreq)
         for name, value in kwargs.iteritems():
-            #setattr(obj, name, value)
-            reqobj[name] = value
-        for l in clusterparam_def:
-            if l not in reqobj:
-                reqobj[l] = clusterparam_def[l]
+            reqobj.update(kwargs)
         setattr(obj, REQKEY, reqobj)
         return obj
     return wrap_obj
@@ -91,8 +84,16 @@ class PTLTestReqs(Plugin):
 
     def __init__(self):
         Plugin.__init__(self)
-        self.reqts = {}
         self._test_marker = 'test_'
+        self.prmcounts = { 
+            'num_servers': 0,
+            'num_moms': 1,
+            'num_comms': 1,
+            'num_clients': 1,
+            'no_mom_on_server': 'False',
+            'no_comm_on_server': 'False',
+            'no_comm_on_mom': 'True'
+        }
 
     def options(self, parser, env):
         """
@@ -117,29 +118,22 @@ class PTLTestReqs(Plugin):
                 tparam = testparam + ',' + _f
             else:
                 tparam = _f
-        dcount = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
-        pccount = {
-            'num_servers': 0,
-            'num_moms': 1,
-            'num_comms': 1,
-            'num_clients': 1,
-            'no_mom_on_server': 'False',
-            'no_comm_on_server': 'False',
-            'no_comm_on_mom': 'True'
-        }
+        paramkeys = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
+        tparam_dic = {}
+        tparam_dic.update(self.prmcounts)
         for h in tparam.split(','):
             if '=' in h:
                 k, v = h.split('=')
-                if k in dcount:
+                if k in paramkeys:
                     if (k == 'server' or k == 'servers'):
-                        pccount['num_servers'] = len(v.split(':'))
+                        tparam_dic['num_servers'] = len(v.split(':'))
                     if (k == 'mom' or k == 'moms'):
-                        pccount['num_moms'] = len(v.split(':'))
+                        tparam_dic['num_moms'] = len(v.split(':'))
                     if k == 'comms':
-                        pccount['num_comms'] = len(v.split(':'))
+                        tparam_dic['num_comms'] = len(v.split(':'))
                     if k == 'clients':
-                        pccount['num_clients'] = len(v.split(':'))
-        self.reqts = pccount
+                        tparam_dic['num_clients'] = len(v.split(':'))
+        self.prmcounts.update(tparam_dic)
 
     def configure(self, options, config):
         """
@@ -151,42 +145,21 @@ class PTLTestReqs(Plugin):
         list is a group of attributes, all of which must match for the rule to
         match.
         """
-        self.tags_to_check = []
         self.config = config
         self.enabled = True
 
-    def wantClass(self, cls):
-        """
-        Accept the class if its subclass of TestCase and has at-least one
-        test case
-        """
-        if not issubclass(cls, unittest.TestCase):
-            return False
-        has_test = False
-        for t in dir(cls):
-            if t.startswith(self._test_marker):
-                has_test = True
-                break
-        if not has_test:
-            return False
-
-    def wantFunction(self, function):
-        """
-        Accept the function if its tags match.
-        """
-        return False
-
-    def is_test_cluster_matching(self, reqt=None, clust=None):
+    def are_requirements_matching(self, testrequirements=None):
         """
         Validates test requirements against test cluster information
         returns True on match or False otherwise
         """
         rv = True
-        mn = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
-        if (reqt is not None and clust is not None):
-            for k in mn:
-                if clust[k] < reqt[k]:
+        keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
+        if (len(self.prmcounts) and len(testrequirements)):
+            for kl in keylist:
+                if self.prmcounts[kl] < testrequirements[kl]:
                     rv = False
+                    return rv
         return rv
 
     def wantMethod(self, method):
@@ -199,18 +172,10 @@ class PTLTestReqs(Plugin):
             return False
         if not method.__name__.startswith(self._test_marker):
             return False
-        rcc = getattr(method, REQKEY, {})
-        print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-        print rcc
-        print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-        print self.reqts
-        print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-        rv = self.is_test_cluster_matching(rcc, self.reqts)
+        requirements = getattr(method, REQKEY, {})
+        rv = self.are_requirements_matching(requirements)
         if rv is False:
             print "^^^^^^^^^^^^^^^^^^^^^ENTERED FALSE CONDITION"
-            #if isclass(err[0]) and issubclass(err[0], SkipTest):
-            #    status = 'SKIP'
-            #    status_data = 'Reason = %s' % (err[1])
-            #method.__unittest_skip__ = True
-            #method.__unittest_skip_why__ = "Cluster not matching!!!!"
+            #setattr(method, __unittest_skip__, True) 
+            return False
         return True

@@ -717,4 +717,3 @@ class PTLTestRunner(Plugin):
             self.lcov_utils.change_baseurl()
             self.logger.info('\n'.join(self.lcov_utils.summarize_coverage()))
         self._cleanup()
-
