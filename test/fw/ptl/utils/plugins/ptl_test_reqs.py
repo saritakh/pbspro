@@ -85,6 +85,7 @@ class PTLTestReqs(Plugin):
     def __init__(self):
         Plugin.__init__(self)
         self._test_marker = 'test_'
+        self.requirements = {}
         self.prmcounts = { 
             'num_servers': 0,
             'num_moms': 1,
@@ -146,18 +147,21 @@ class PTLTestReqs(Plugin):
         match.
         """
         self.config = config
+        #self.requirements = getattr(method, REQKEY, {})
+        #if self.requirements:
+        #    self.enabled = True
         self.enabled = True
 
-    def are_requirements_matching(self, testrequirements=None):
+    def are_requirements_matching(self):
         """
         Validates test requirements against test cluster information
         returns True on match or False otherwise
         """
         rv = True
         keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
-        if (len(self.prmcounts) and len(testrequirements)):
+        if (len(self.prmcounts) and len(self.requirements)):
             for kl in keylist:
-                if self.prmcounts[kl] < testrequirements[kl]:
+                if self.prmcounts[kl] < self.requirements[kl]:
                     rv = False
                     return rv
         return rv
@@ -172,10 +176,10 @@ class PTLTestReqs(Plugin):
             return False
         if not method.__name__.startswith(self._test_marker):
             return False
-        requirements = getattr(method, REQKEY, {})
-        rv = self.are_requirements_matching(requirements)
+        self.requirements = getattr(method, REQKEY, {})
+        #rv = self.are_requirements_matching(requirements)
+        rv = self.are_requirements_matching()
         if rv is False:
             print "^^^^^^^^^^^^^^^^^^^^^ENTERED FALSE CONDITION"
-            #setattr(method, __unittest_skip__, True) 
             return False
         return True
