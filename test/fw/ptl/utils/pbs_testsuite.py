@@ -225,48 +225,6 @@ def skipOnCpuSet(function):
     return wrapper
 
 
-def set_testparam(testparam=None, paramfile=None):
-    if paramfile is not None:
-        _pf = open(paramfile, 'r')
-        _params_from_file = _pf.readlines()
-        _pf.close()
-        _nparams = []
-        for l in range(len(_params_from_file)):
-            if _params_from_file[l].startswith('#'):
-                continue
-            else:
-                _nparams.append(_params_from_file[l])
-        _f = ','.join(map(lambda l: l.strip('\r\n'), _nparams))
-        if testparam is not None:
-            testparam += ',' + _f
-        else:
-            testparam = _f
-    dcount = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
-    pccount = {
-        'num_servers': 0,
-        'num_moms': 1,
-        'num_comms': 1,
-        'num_clients': 1,
-        'no_mom_on_server': 'False',
-        'no_comm_on_server': 'False',
-        'no_comm_on_mom': 'True'
-    }
-    for h in testparam.split(','):
-        if '=' in h:
-            k, v = h.split('=')
-            if k in dcount:
-                if (k == 'server' or k == 'servers'):
-                    pccount['num_servers'] = len(v.split(':'))
-                if (k == 'mom' or k == 'moms'):
-                    pccount['num_moms'] = len(v.split(':'))
-                if k == 'comms':
-                    pccount['num_comms'] = len(v.split(':'))
-                if k == 'clients':
-                    pccount['num_clients'] = len(v.split(':'))
-    PBSTestSuite.param = testparam
-    PBSTestSuite.dicparam = pccount
-    
-
 class PBSServiceInstanceWrapper(dict):
 
     """

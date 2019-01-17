@@ -435,9 +435,6 @@ if __name__ == '__main__':
         testsuites = 'PBSTestSuite'
         follow = True
 
-    #if (testparam is not None or paramfile is not None):
-    #    ptl.utils.pbs_testsuite.set_testparam(testparam, paramfile)
-
     if only_info:
         testinfo = PTLTestInfo()
         testreqs = PTLTestReqs()
@@ -466,7 +463,6 @@ if __name__ == '__main__':
         db.set_data(dbtype, dbname, dbaccess)
         data.set_data(post_data_dir, max_postdata_threshold)
         testreqs.set_data(paramfile, testparam)
-        #plugins = (loader, testtags, runner, db, data)
         plugins = (loader, testtags, runner, db, data, testreqs)
     if user_plugins:
         for plugin in user_plugins.split(','):
