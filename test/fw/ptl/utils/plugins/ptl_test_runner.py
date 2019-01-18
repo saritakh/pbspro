@@ -177,6 +177,8 @@ class _PtlTestResult(unittest.TestResult):
             if tdoc is not None:
                 tdoc = '\n' + tdoc
             self.logger.info('test docstring: %s' % (tdoc))
+        self.logger.info('1' + str(getattr(test, '__ptl_skip__', False)))
+        self.logger.info('2' + str(getattr(test.test, '__ptl_skip__', False)))
 
     def addSuccess(self, test):
         """
@@ -574,13 +576,21 @@ class PTLTestRunner(Plugin):
         else:
             test.err_in_string = 'None'
         test.end_time = datetime.datetime.now()
+        test.start_time = datetime.datetime.now()
         test.duration = test.end_time - test.start_time
         test.captured_logs = self.result.handler.get_logs()
+
+    #def __get_req_satisfy(self, test):
+    #    method = getattr(test.test, getattr(test.test, '_testMethodName'))
+    #    print "GOT ITTTTTTTTTTTTTTTTTTTTTTTTTT__get_req_satisfy"
+    #    return getattr(method, REQ_SATISFY_KEY)
 
     def startTest(self, test):
         """
         Start the test
         """
+        print 'here'
+        test.start_time = datetime.datetime.now()
         if ((self.cumulative_tc_failure_threshold != 0) and
                 (self.__tf_count >= self.cumulative_tc_failure_threshold)):
             _msg = 'Total testcases failure count exceeded cumulative'
@@ -599,6 +609,8 @@ class PTLTestRunner(Plugin):
             self.__failed_tc_count_msg = True
             raise TCThresholdReached
         timeout = self.__get_timeout(test)
+        #if getattr(test, '__ptl_skip__', False):
+        #    raise SkipTest()
 
         def timeout_handler(signum, frame):
             raise TimeOut('Timed out after %s second' % timeout)

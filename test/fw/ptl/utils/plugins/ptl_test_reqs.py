@@ -78,8 +78,7 @@ class PTLTestReqs(Plugin):
     Load test cases from given parameter
     """
     name = 'PTLTestReqs'
-    score = sys.maxint - 7
-    enabled = True
+    score = sys.maxint - 3
     logger = logging.getLogger(__name__)
 
     def __init__(self):
@@ -157,16 +156,13 @@ class PTLTestReqs(Plugin):
         Validates test requirements against test cluster information
         returns True on match or False otherwise
         """
-        rv = True
         keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
         if (len(self.prmcounts) and len(self.requirements)):
             for kl in keylist:
                 if self.prmcounts[kl] < self.requirements[kl]:
-                    rv = False
-                    return rv
-        return rv
+                    return False
 
-    def wantMethod(self, method):
+    def prepareTestCase(self, method):
         """
         Accept the method if its tags match.
         """
@@ -179,7 +175,9 @@ class PTLTestReqs(Plugin):
         self.requirements = getattr(method, REQKEY, {})
         #rv = self.are_requirements_matching(requirements)
         rv = self.are_requirements_matching()
+        print 'here1'
         if rv is False:
             print "^^^^^^^^^^^^^^^^^^^^^ENTERED FALSE CONDITION"
-            return False
-        return True
+            setattr(method, '__unittest_skip__', True)
+            setattr(method, '__unittest_skip_why__', 'REQSKIPPED')
+        return method
