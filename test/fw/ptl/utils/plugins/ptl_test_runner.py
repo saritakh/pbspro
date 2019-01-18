@@ -56,6 +56,7 @@ from nose.plugins.skip import SkipTest
 from nose.suite import ContextSuite
 from ptl.utils.pbs_testsuite import PBSTestSuite
 from ptl.utils.pbs_testsuite import TIMEOUT_KEY
+from ptl.utils.pbs_testsuite import REQKEY
 from ptl.utils.pbs_dshutils import DshUtils
 from ptl.lib.pbs_testlib import PBSInitServices
 from ptl.utils.pbs_covutils import LcovUtils
@@ -481,7 +482,6 @@ class PTLTestRunner(Plugin):
         self.__failed_tc_count = 0
         self.__tf_count = 0
         self.__failed_tc_count_msg = False
-        self.param_count = {}
 
     def options(self, parser, env):
         """
@@ -608,11 +608,17 @@ class PTLTestRunner(Plugin):
             self.__failed_tc_count_msg = True
             raise TCThresholdReached
         timeout = self.__get_timeout(test)
-        requirements = self.__get_param_count()
-        rv = self.__are_requirements_matching(requirements)
-        if rv == False:
-            self.result.startTest(test)
-            raise SkipTest('asdasdas') 
+        pcounts = self.__get_param_count()
+        print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
+        print pcounts
+        requirements = getattr(test.test, REQKEY, {})
+        print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
+        print requirements
+        if requirements:
+            rv = self.__are_requirements_matching(requirements, pcounts)
+            if not rv:
+                self.result.startTest(test)
+                raise SkipTest('asdasdas') 
         def timeout_handler(signum, frame):
             raise TimeOut('Timed out after %s second' % timeout)
         old_handler = signal.signal(signal.SIGALRM, timeout_handler)
@@ -720,7 +726,7 @@ class PTLTestRunner(Plugin):
         """
         Method to convert data in param into dictionary of counts
         """
-        self.param_count = { 
+        param_count = { 
             'num_servers': 0,
             'num_moms': 1,
             'num_comms': 1,
@@ -731,7 +737,9 @@ class PTLTestRunner(Plugin):
         }
         paramkeys = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
         tparam_dic = {}
-        tparam_dic.update(self.param_count)
+        tparam_dic.update(param_count)
+        print "***************************"
+        print self.param
         for h in self.param.split(','):
             if '=' in h:
                 k, v = h.split('=')
@@ -746,15 +754,19 @@ class PTLTestRunner(Plugin):
                         tparam_dic['num_clients'] = len(v.split(':'))
         return tparam_dic
 
-    def __are_requirements_matching(self, requirements={}):
+    def __are_requirements_matching(self, requirements={}, param_count={}):
         """
         Validates test requirements against test cluster information
         returns True on match or False otherwise
         """
         keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
-        if (self.param_count and requirements):
+        if (param_count and requirements):
+            print "Param count & requirements--------------------"
+            print param_count
+            print requirements
             for kl in keylist:
-                if self.param_count[kl] < requirements[kl]:
+                if param_count[kl] < requirements[kl]:
+                    print "Param count is less than requirements--------------------"
                     return False
 
     def finalize(self, result):

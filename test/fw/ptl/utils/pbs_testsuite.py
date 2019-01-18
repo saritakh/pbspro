@@ -63,9 +63,6 @@ except ImportError:
     class SkipTest(Exception):
         pass
 
-from ptl.utils.plugins.ptl_test_reqs import requirements
-from ptl.utils.plugins.ptl_test_reqs import REQKEY
-
 # Test users/groups are expected to exist on the test systems
 # User running the tests and the test users should have passwordless sudo
 # access configured to avoid interrupted (queries for password) test runs
@@ -242,10 +239,15 @@ def requirements(*args, **kwargs):
     reqobj = default_requirements
     def wrap_obj(obj):
         getreq = getattr(obj, REQKEY, {})
+        print id(obj)
         if getreq:
             reqobj.update(getreq)
         reqobj.update(kwargs)
         setattr(obj, REQKEY, reqobj)
+        print id(obj)
+        print "^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        print getattr(obj, REQKEY, {})
+        print reqobj
         return obj
     return wrap_obj
 
