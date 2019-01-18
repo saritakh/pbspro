@@ -481,6 +481,7 @@ class PTLTestRunner(Plugin):
         self.__failed_tc_count = 0
         self.__tf_count = 0
         self.__failed_tc_count_msg = False
+        self.param_count = {}
 
     def options(self, parser, env):
         """
@@ -607,9 +608,11 @@ class PTLTestRunner(Plugin):
             self.__failed_tc_count_msg = True
             raise TCThresholdReached
         timeout = self.__get_timeout(test)
-       
-        self.result.startTest(test)
-        raise SkipTest('asdasdas') 
+        requirements = self.__get_param_count()
+        rv = self.__are_requirements_matching(requirements)
+        if rv == False:
+            self.result.startTest(test)
+            raise SkipTest('asdasdas') 
         def timeout_handler(signum, frame):
             raise TimeOut('Timed out after %s second' % timeout)
         old_handler = signal.signal(signal.SIGALRM, timeout_handler)
@@ -712,6 +715,47 @@ class PTLTestRunner(Plugin):
             self.lcov_utils.initialize_coverage(name='PTLTestCov')
             PBSInitServices().restart()
         self._cleanup()
+
+    def __get_param_count(self):
+        """
+        Method to convert data in param into dictionary of counts
+        """
+        self.param_count = { 
+            'num_servers': 0,
+            'num_moms': 1,
+            'num_comms': 1,
+            'num_clients': 1,
+            'no_mom_on_server': False,
+            'no_comm_on_server': False,
+            'no_comm_on_mom': True
+        }
+        paramkeys = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
+        tparam_dic = {}
+        tparam_dic.update(self.param_count)
+        for h in self.param.split(','):
+            if '=' in h:
+                k, v = h.split('=')
+                if k in paramkeys:
+                    if (k == 'server' or k == 'servers'):
+                        tparam_dic['num_servers'] = len(v.split(':'))
+                    if (k == 'mom' or k == 'moms'):
+                        tparam_dic['num_moms'] = len(v.split(':'))
+                    if k == 'comms':
+                        tparam_dic['num_comms'] = len(v.split(':'))
+                    if k == 'clients':
+                        tparam_dic['num_clients'] = len(v.split(':'))
+        return tparam_dic
+
+    def __are_requirements_matching(self, requirements={}):
+        """
+        Validates test requirements against test cluster information
+        returns True on match or False otherwise
+        """
+        keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
+        if (self.param_count and requirements):
+            for kl in keylist:
+                if self.param_count[kl] < requirements[kl]:
+                    return False
 
     def finalize(self, result):
         if self.lcov_data is not None:
