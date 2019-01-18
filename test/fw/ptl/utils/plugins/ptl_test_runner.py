@@ -177,8 +177,11 @@ class _PtlTestResult(unittest.TestResult):
             if tdoc is not None:
                 tdoc = '\n' + tdoc
             self.logger.info('test docstring: %s' % (tdoc))
-        self.logger.info('1' + str(getattr(test, '__ptl_skip__', False)))
-        self.logger.info('2' + str(getattr(test.test, '__ptl_skip__', False)))
+        self.logger.info('1' + str(getattr(test.test, 'conf', False)))
+        #test.__unittest_skip__ = True
+        #test.__unittest_skip_why__ = 'SKIPPEDDDDDDTrue'
+        #test.test.__unittest_skip__ = True
+        self.logger.info('2' + str(getattr(test.test, '__unittest_skip__', False)))
 
     def addSuccess(self, test):
         """
@@ -580,11 +583,6 @@ class PTLTestRunner(Plugin):
         test.duration = test.end_time - test.start_time
         test.captured_logs = self.result.handler.get_logs()
 
-    #def __get_req_satisfy(self, test):
-    #    method = getattr(test.test, getattr(test.test, '_testMethodName'))
-    #    print "GOT ITTTTTTTTTTTTTTTTTTTTTTTTTT__get_req_satisfy"
-    #    return getattr(method, REQ_SATISFY_KEY)
-
     def startTest(self, test):
         """
         Start the test
@@ -609,9 +607,9 @@ class PTLTestRunner(Plugin):
             self.__failed_tc_count_msg = True
             raise TCThresholdReached
         timeout = self.__get_timeout(test)
-        #if getattr(test, '__ptl_skip__', False):
-        #    raise SkipTest()
-
+       
+        self.result.startTest(test)
+        raise SkipTest('asdasdas') 
         def timeout_handler(signum, frame):
             raise TimeOut('Timed out after %s second' % timeout)
         old_handler = signal.signal(signal.SIGALRM, timeout_handler)
