@@ -42,7 +42,6 @@ import pwd
 import logging
 import platform
 import traceback
-import datetime
 import time
 import json
 import ptl.utils.pbs_logutils as lu
@@ -1630,13 +1629,12 @@ class JSONDb(DBType):
 
     def close(self, result=None):
         if result is not None:
-            if _TESTRESULT_TN in self.__dbobj:
-                self.__dbobj[_TESTRESULT_TN].seek(0)
-                df = json.load(self.__dbobj[_TESTRESULT_TN])
-                dur = str(result.stop - result.start)
-                df['test_summary']['test_duration'] = dur
-                self.__dbobj[_TESTRESULT_TN].seek(0)
-                json.dump(df, self.__dbobj[_TESTRESULT_TN], indent=2)
+            self.__dbobj[_TESTRESULT_TN].seek(0)
+            df = json.load(self.__dbobj[_TESTRESULT_TN])
+            dur = str(result.stop - result.start)
+            df['test_summary']['test_duration'] = dur
+            self.__dbobj[_TESTRESULT_TN].seek(0)
+            json.dump(df, self.__dbobj[_TESTRESULT_TN], indent=2)
         for v in self.__dbobj.values():
             v.write('\n')
             v.flush()

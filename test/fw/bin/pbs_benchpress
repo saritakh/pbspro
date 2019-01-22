@@ -57,8 +57,6 @@ from ptl.utils.plugins.ptl_test_db import PTLTestDb
 from ptl.utils.plugins.ptl_test_info import PTLTestInfo
 from ptl.utils.plugins.ptl_test_tags import PTLTestTags
 from ptl.utils.plugins.ptl_test_data import PTLTestData
-from ptl.utils.plugins.ptl_test_reqs import PTLTestReqs
-from ptl.utils.pbs_testsuite import PBSTestSuite
 
 
 # trap SIGINT and SIGPIPE
@@ -437,11 +435,9 @@ if __name__ == '__main__':
 
     if only_info:
         testinfo = PTLTestInfo()
-        testreqs = PTLTestReqs()
         testinfo.set_data(testsuites, list_test,
                           showinfo, verbose, gen_ts_tree)
-        testreqs.set_data(paramfile, testparam)
-        plugins = (testinfo, testreqs, )
+        plugins = (testinfo,)
     elif (tags_info or list_tags):
         loader = PTLTestLoader()
         testtags = PTLTestTags()
@@ -454,7 +450,6 @@ if __name__ == '__main__':
         runner = PTLTestRunner()
         db = PTLTestDb()
         data = PTLTestData()
-        testreqs = PTLTestReqs()
         loader.set_data(testgroup, testsuites, excludes, follow)
         testtags.set_data(tags, eval_tags)
         runner.set_data(paramfile, testparam, lcov_bin, lcov_data, lcov_out,
@@ -462,8 +457,7 @@ if __name__ == '__main__':
                         tc_failure_threshold, cumulative_tc_failure_threshold)
         db.set_data(dbtype, dbname, dbaccess)
         data.set_data(post_data_dir, max_postdata_threshold)
-        testreqs.set_data(paramfile, testparam)
-        plugins = (loader, testtags, runner, db, data, testreqs)
+        plugins = (loader, testtags, runner, db, data)
     if user_plugins:
         for plugin in user_plugins.split(','):
             if '=' not in plugin:

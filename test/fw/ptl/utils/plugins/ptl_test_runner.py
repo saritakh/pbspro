@@ -178,11 +178,11 @@ class _PtlTestResult(unittest.TestResult):
             if tdoc is not None:
                 tdoc = '\n' + tdoc
             self.logger.info('test docstring: %s' % (tdoc))
-        self.logger.info('1' + str(getattr(test.test, 'conf', False)))
+        #self.logger.info('1' + str(getattr(test.test, 'conf', False)))
         #test.__unittest_skip__ = True
         #test.__unittest_skip_why__ = 'SKIPPEDDDDDDTrue'
         #test.test.__unittest_skip__ = True
-        self.logger.info('2' + str(getattr(test.test, '__unittest_skip__', False)))
+        #self.logger.info('2' + str(getattr(test.test, '__unittest_skip__', False)))
 
     def addSuccess(self, test):
         """
@@ -561,6 +561,10 @@ class PTLTestRunner(Plugin):
                 __conf = getattr(test.context, 'conf')
             return __conf['default_testcase_timeout']
 
+    def __get_requirements(self, test):
+        method = getattr(test.test, getattr(test.test, '_testMethodName'))
+        return getattr(method, REQKEY, {})
+
     def __set_test_end_data(self, test, err=None):
         if not hasattr(test, 'start_time'):
             test = test.context
@@ -608,17 +612,30 @@ class PTLTestRunner(Plugin):
             self.__failed_tc_count_msg = True
             raise TCThresholdReached
         timeout = self.__get_timeout(test)
+        #Requirements code block
+        pcounts = {}
         pcounts = self.__get_param_count()
         print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
         print pcounts
-        requirements = getattr(test.test, REQKEY, {})
+        requirements = {}
+        requirements = self.__get_requirements(test)
+        #method = getattr(test.test, getattr(test.test, '_testMethodName'))
+        #requirements = getattr(method, REQKEY, {})
+        #print getattr(test.test, '_testMethodName')
         print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
         print requirements
         if requirements:
+            print "Yes requirements got  -----------------"
             rv = self.__are_requirements_matching(requirements, pcounts)
-            if not rv:
+            print rv
+            print '$$$$$$$%%%%%%%%%%%%%5'
+            #if (rv is not None and not rv):
+            if rv is False:
+                print "are_requirements_matching() returned false"
                 self.result.startTest(test)
-                raise SkipTest('asdasdas') 
+                raise SkipTest('SKIPPED TEST NOW') 
+        else:
+            print "No requirements got  -----------------"
         def timeout_handler(signum, frame):
             raise TimeOut('Timed out after %s second' % timeout)
         old_handler = signal.signal(signal.SIGALRM, timeout_handler)
@@ -738,8 +755,6 @@ class PTLTestRunner(Plugin):
         paramkeys = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
         tparam_dic = {}
         tparam_dic.update(param_count)
-        print "***************************"
-        print self.param
         for h in self.param.split(','):
             if '=' in h:
                 k, v = h.split('=')
@@ -761,8 +776,9 @@ class PTLTestRunner(Plugin):
         """
         keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
         if (param_count and requirements):
-            print "Param count & requirements--------------------"
+            print "Param count--------------------"
             print param_count
+            print "requirements--------------------"
             print requirements
             for kl in keylist:
                 if param_count[kl] < requirements[kl]:
