@@ -40,7 +40,7 @@ import logging
 from nose.plugins.base import Plugin
 from ptl.utils.pbs_testsuite import PBSTestSuite
 from ptl.utils.plugins.ptl_test_tags import TAGKEY
-from ptl.utils.plugins.ptl_test_reqs import REQKEY
+from ptl.utils.pbs_testsuite import REQKEY
 from copy import deepcopy
 
 log = logging.getLogger('nose.plugins.PTLTestInfo')

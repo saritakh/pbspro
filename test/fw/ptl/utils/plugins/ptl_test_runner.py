@@ -178,11 +178,6 @@ class _PtlTestResult(unittest.TestResult):
             if tdoc is not None:
                 tdoc = '\n' + tdoc
             self.logger.info('test docstring: %s' % (tdoc))
-        #self.logger.info('1' + str(getattr(test.test, 'conf', False)))
-        #test.__unittest_skip__ = True
-        #test.__unittest_skip_why__ = 'SKIPPEDDDDDDTrue'
-        #test.test.__unittest_skip__ = True
-        #self.logger.info('2' + str(getattr(test.test, '__unittest_skip__', False)))
 
     def addSuccess(self, test):
         """
@@ -584,15 +579,54 @@ class PTLTestRunner(Plugin):
         else:
             test.err_in_string = 'None'
         test.end_time = datetime.datetime.now()
-        test.start_time = datetime.datetime.now()
         test.duration = test.end_time - test.start_time
         test.captured_logs = self.result.handler.get_logs()
+
+    def __get_param_count(self):
+        """
+        Method to convert data in param into dictionary of counts
+        """
+        param_count = {
+            'num_servers': 0,
+            'num_moms': 1,
+            'num_comms': 1,
+            'num_clients': 1,
+            'no_mom_on_server': False,
+            'no_comm_on_server': False,
+            'no_comm_on_mom': True
+        }
+        paramkeys = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
+        tparam_dic = {}
+        tparam_dic.update(param_count)
+        for h in self.param.split(','):
+            if '=' in h:
+                k, v = h.split('=')
+                if k in paramkeys:
+                    if (k == 'server' or k == 'servers'):
+                        tparam_dic['num_servers'] = len(v.split(':'))
+                    if (k == 'mom' or k == 'moms'):
+                        tparam_dic['num_moms'] = len(v.split(':'))
+                    if k == 'comms':
+                        tparam_dic['num_comms'] = len(v.split(':'))
+                    if k == 'clients':
+                        tparam_dic['num_clients'] = len(v.split(':'))
+        return tparam_dic
+
+    def __are_requirements_matching(self, requirements={}, param_count={}):
+        """
+        Validates test requirements against test cluster information
+        returns True on match or False otherwise
+        """
+        keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
+        if (param_count and requirements):
+            for kl in keylist:
+                if param_count[kl] < requirements[kl]:
+                    return False
 
     def startTest(self, test):
         """
         Start the test
         """
-        print 'here'
         test.start_time = datetime.datetime.now()
         if ((self.cumulative_tc_failure_threshold != 0) and
                 (self.__tf_count >= self.cumulative_tc_failure_threshold)):
@@ -612,30 +646,19 @@ class PTLTestRunner(Plugin):
             self.__failed_tc_count_msg = True
             raise TCThresholdReached
         timeout = self.__get_timeout(test)
-        #Requirements code block
         pcounts = {}
-        pcounts = self.__get_param_count()
-        print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
-        print pcounts
-        requirements = {}
+        if self.param is not None:
+            pcounts = self.__get_param_count()
         requirements = self.__get_requirements(test)
-        #method = getattr(test.test, getattr(test.test, '_testMethodName'))
-        #requirements = getattr(method, REQKEY, {})
-        #print getattr(test.test, '_testMethodName')
-        print "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
-        print requirements
         if requirements:
-            print "Yes requirements got  -----------------"
-            rv = self.__are_requirements_matching(requirements, pcounts)
-            print rv
-            print '$$$$$$$%%%%%%%%%%%%%5'
-            #if (rv is not None and not rv):
-            if rv is False:
-                print "are_requirements_matching() returned false"
+            if not pcounts:
                 self.result.startTest(test)
-                raise SkipTest('SKIPPED TEST NOW') 
-        else:
-            print "No requirements got  -----------------"
+                raise SkipTest('SKIPPED TEST since test has requirements')
+            rv = self.__are_requirements_matching(requirements, pcounts)
+            if rv is False:
+                self.result.startTest(test)
+                raise SkipTest('SKIPPED TEST since requirements not matching')
+
         def timeout_handler(signum, frame):
             raise TimeOut('Timed out after %s second' % timeout)
         old_handler = signal.signal(signal.SIGALRM, timeout_handler)
@@ -738,52 +761,6 @@ class PTLTestRunner(Plugin):
             self.lcov_utils.initialize_coverage(name='PTLTestCov')
             PBSInitServices().restart()
         self._cleanup()
-
-    def __get_param_count(self):
-        """
-        Method to convert data in param into dictionary of counts
-        """
-        param_count = { 
-            'num_servers': 0,
-            'num_moms': 1,
-            'num_comms': 1,
-            'num_clients': 1,
-            'no_mom_on_server': False,
-            'no_comm_on_server': False,
-            'no_comm_on_mom': True
-        }
-        paramkeys = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
-        tparam_dic = {}
-        tparam_dic.update(param_count)
-        for h in self.param.split(','):
-            if '=' in h:
-                k, v = h.split('=')
-                if k in paramkeys:
-                    if (k == 'server' or k == 'servers'):
-                        tparam_dic['num_servers'] = len(v.split(':'))
-                    if (k == 'mom' or k == 'moms'):
-                        tparam_dic['num_moms'] = len(v.split(':'))
-                    if k == 'comms':
-                        tparam_dic['num_comms'] = len(v.split(':'))
-                    if k == 'clients':
-                        tparam_dic['num_clients'] = len(v.split(':'))
-        return tparam_dic
-
-    def __are_requirements_matching(self, requirements={}, param_count={}):
-        """
-        Validates test requirements against test cluster information
-        returns True on match or False otherwise
-        """
-        keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
-        if (param_count and requirements):
-            print "Param count--------------------"
-            print param_count
-            print "requirements--------------------"
-            print requirements
-            for kl in keylist:
-                if param_count[kl] < requirements[kl]:
-                    print "Param count is less than requirements--------------------"
-                    return False
 
     def finalize(self, result):
         if self.lcov_data is not None:

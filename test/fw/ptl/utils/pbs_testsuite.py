@@ -63,6 +63,7 @@ except ImportError:
     class SkipTest(Exception):
         pass
 
+
 # Test users/groups are expected to exist on the test systems
 # User running the tests and the test users should have passwordless sudo
 # access configured to avoid interrupted (queries for password) test runs
@@ -222,6 +223,7 @@ def skipOnCpuSet(function):
     wrapper.__name__ = function.__name__
     return wrapper
 
+
 def requirements(*args, **kwargs):
     """
     Decorator to provide the cluster information required for a particular
@@ -237,17 +239,13 @@ def requirements(*args, **kwargs):
         'no_comm_on_mom': True
     }
     reqobj = default_requirements
+
     def wrap_obj(obj):
         getreq = getattr(obj, REQKEY, {})
-        print id(obj)
         if getreq:
             reqobj.update(getreq)
         reqobj.update(kwargs)
         setattr(obj, REQKEY, reqobj)
-        print id(obj)
-        print "^^^^^^^^^^^^^^^^^^^^^^^^^^"
-        print getattr(obj, REQKEY, {})
-        print reqobj
         return obj
     return wrap_obj
 
@@ -439,7 +437,6 @@ class PBSTestSuite(unittest.TestCase):
     additional_data = {}
     conf = {}
     param = None
-    dicparam = {}
     du = DshUtils()
     _procmon = None
     _process_monitoring = False
