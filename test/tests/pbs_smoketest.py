@@ -62,7 +62,6 @@ class SmokeTest(PBSTestSuite):
         j = Job(TEST_USER)
         jid = self.server.submit(j)
         self.server.expect(JOB, {'job_state': 'R'}, id=jid)
-        print self.param
 
     @skipOnCpuSet
     def test_submit_job_array(self):
