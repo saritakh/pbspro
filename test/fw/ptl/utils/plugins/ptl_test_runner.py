@@ -56,7 +56,7 @@ from nose.plugins.skip import SkipTest
 from nose.suite import ContextSuite
 from ptl.utils.pbs_testsuite import PBSTestSuite
 from ptl.utils.pbs_testsuite import TIMEOUT_KEY
-from ptl.utils.pbs_testsuite import REQKEY
+from ptl.utils.pbs_testsuite import REQUIREMENTS_KEY
 from ptl.utils.pbs_dshutils import DshUtils
 from ptl.lib.pbs_testlib import PBSInitServices
 from ptl.utils.pbs_covutils import LcovUtils
@@ -66,6 +66,32 @@ except ImportError:
     from StringIO import StringIO
 
 log = logging.getLogger('nose.plugins.PTLTestRunner')
+
+def get_requirements_value(method, cls, req_name, default=False):
+    """
+    get requirements at test case and suite level
+    """
+    Missing = {}
+    default_requirements = {
+        'num_servers': 1,
+        'num_moms': 1,
+        'num_comms': 1,
+        'num_clients': 1,
+        'no_mom_on_server': False,
+        'no_comm_on_server': False,
+        'no_comm_on_mom': True
+    }
+    value1 = getattr(method, req_name, Missing)
+    if cls is not None:
+        value2 = getattr(cls, req_name, Missing)
+    value3 = value2
+    for key in default_requirements:
+        if key in value1:
+            value3[key] = value1[key]
+    for key in default_requirements:
+        if key not in value3:
+            value3[key] = default_requirements[key]
+    return value3
 
 
 class TimeOut(Exception):
@@ -477,6 +503,16 @@ class PTLTestRunner(Plugin):
         self.__failed_tc_count = 0
         self.__tf_count = 0
         self.__failed_tc_count_msg = False
+        self._test_marker = 'test_'
+        self.tst_req = {
+            'num_servers': 1,
+            'num_moms': 1,
+            'num_comms': 1,
+            'num_clients': 1,
+            'no_mom_on_server': False,
+            'no_comm_on_server': False,
+            'no_comm_on_mom': True
+        }
 
     def options(self, parser, env):
         """
@@ -558,7 +594,7 @@ class PTLTestRunner(Plugin):
 
     def __get_requirements(self, test):
         method = getattr(test.test, getattr(test.test, '_testMethodName'))
-        return getattr(method, REQKEY, {})
+        return getattr(method, REQUIREMENTS_KEY, {})
 
     def __set_test_end_data(self, test, err=None):
         if not hasattr(test, 'start_time'):
@@ -612,15 +648,25 @@ class PTLTestRunner(Plugin):
                         tparam_dic['num_clients'] = len(v.split(':'))
         return tparam_dic
 
-    def __are_requirements_matching(self, requirements={}, param_count={}):
+    def __are_requirements_matching(self, requirements={}, param_count={}, test=None):
         """
         Validates test requirements against test cluster information
         returns True on match or False otherwise
         """
         keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
+        #print "param_count.............."
+        #print param_count
+        #print "requirements.............."
+        #print requirements
+        if test is not None:
+            method = getattr(test.test, getattr(test.test, '_testMethodName'))
+            cls = method.im_class
+            tc_req = get_requirements_value(method, cls, REQUIREMENTS_KEY)
+            #print "tc_req ............................"
+            #print tc_req
         if (param_count and requirements):
             for kl in keylist:
-                if param_count[kl] < requirements[kl]:
+                if param_count[kl] < tc_req[kl]:
                     return False
 
     def startTest(self, test):
@@ -628,6 +674,7 @@ class PTLTestRunner(Plugin):
         Start the test
         """
         test.start_time = datetime.datetime.now()
+        requirements = {}
         if ((self.cumulative_tc_failure_threshold != 0) and
                 (self.__tf_count >= self.cumulative_tc_failure_threshold)):
             _msg = 'Total testcases failure count exceeded cumulative'
@@ -654,7 +701,7 @@ class PTLTestRunner(Plugin):
             if not pcounts:
                 self.result.startTest(test)
                 raise SkipTest('SKIPPED TEST since test has requirements')
-            rv = self.__are_requirements_matching(requirements, pcounts)
+            rv = self.__are_requirements_matching(requirements, pcounts, test)
             if rv is False:
                 self.result.startTest(test)
                 raise SkipTest('SKIPPED TEST since requirements not matching')

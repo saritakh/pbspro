@@ -40,7 +40,7 @@ import logging
 from nose.plugins.base import Plugin
 from ptl.utils.pbs_testsuite import PBSTestSuite
 from ptl.utils.plugins.ptl_test_tags import TAGKEY
-from ptl.utils.pbs_testsuite import REQKEY
+from ptl.utils.pbs_testsuite import REQUIREMENTS_KEY
 from copy import deepcopy
 
 log = logging.getLogger('nose.plugins.PTLTestInfo')
@@ -193,9 +193,11 @@ class PTLTestInfo(Plugin):
         tsd = {}
         tsd['doc'] = str(suite.__doc__)
         tstags = getattr(suite, TAGKEY, [])
-        tsreqts = getattr(suite, REQKEY, {})
+        tsreqts = getattr(suite, REQUIREMENTS_KEY, {})
         if tsreqts:
             tsd['requirements'] = tsreqts
+            print "TS REQUIREMENTS 0000000000000000000000"
+            print tsreqts
         numnodes = 1
         for tag in tstags:
             if 'numnodes' in tag:
@@ -218,9 +220,11 @@ class PTLTestInfo(Plugin):
                     continue
                 tcd['doc'] = str(tc.__doc__)
                 tctags = sorted(set(tstags + getattr(tc, TAGKEY, [])))
-                tcreqts = getattr(tc, REQKEY, {})
+                tcreqts = getattr(tc, REQUIREMENTS_KEY, {})
                 if tcreqts:
                     tcd['requirements'] = tcreqts
+                    print "TC REQUIREMENTS 111111111111111111"
+                    print tcreqts
                 numnodes = 1
                 for tag in tctags:
                     if 'numnodes' in tag:
