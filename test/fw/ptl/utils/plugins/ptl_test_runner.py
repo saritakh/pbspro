@@ -67,32 +67,6 @@ except ImportError:
 
 log = logging.getLogger('nose.plugins.PTLTestRunner')
 
-def get_requirements_value(method, cls, req_name, default=False):
-    """
-    get requirements at test case and suite level
-    """
-    Missing = {}
-    default_requirements = {
-        'num_servers': 1,
-        'num_moms': 1,
-        'num_comms': 1,
-        'num_clients': 1,
-        'no_mom_on_server': False,
-        'no_comm_on_server': False,
-        'no_comm_on_mom': True
-    }
-    value1 = getattr(method, req_name, Missing)
-    if cls is not None:
-        value2 = getattr(cls, req_name, Missing)
-    value3 = value2
-    for key in default_requirements:
-        if key in value1:
-            value3[key] = value1[key]
-    for key in default_requirements:
-        if key not in value3:
-            value3[key] = default_requirements[key]
-    return value3
-
 
 class TimeOut(Exception):
 
@@ -592,10 +566,6 @@ class PTLTestRunner(Plugin):
                 __conf = getattr(test.context, 'conf')
             return __conf['default_testcase_timeout']
 
-    def __get_requirements(self, test):
-        method = getattr(test.test, getattr(test.test, '_testMethodName'))
-        return getattr(method, REQUIREMENTS_KEY, {})
-
     def __set_test_end_data(self, test, err=None):
         if not hasattr(test, 'start_time'):
             test = test.context
@@ -633,11 +603,13 @@ class PTLTestRunner(Plugin):
         }
         paramkeys = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
         tparam_dic = {}
+        tparam_contents = {}
         tparam_dic.update(param_count)
         for h in self.param.split(','):
             if '=' in h:
                 k, v = h.split('=')
                 if k in paramkeys:
+                    tparam_contents[k] = [v.replace(':',',')]
                     if (k == 'server' or k == 'servers'):
                         tparam_dic['num_servers'] = len(v.split(':'))
                     if (k == 'mom' or k == 'moms'):
@@ -646,9 +618,53 @@ class PTLTestRunner(Plugin):
                         tparam_dic['num_comms'] = len(v.split(':'))
                     if k == 'clients':
                         tparam_dic['num_clients'] = len(v.split(':'))
+        print "Param data %%%%%%%%%%%%%%"
+        print tparam_contents
+        if set(tparam_contents['servers']) & set(tparam_contents['moms']):
+            tparam_dic['no_mom_on_server'] = True
+        if set(tparam_contents['server']) & set(tparam_contents['moms']):
+            tparam_dic['no_mom_on_server'] = True
+        if set(tparam_contents['servers']) & set(tparam_contents['comms']):
+            tparam_dic['no_comm_on_server'] = True
+        if set(tparam_contents['server']) & set(tparam_contents['comms']):
+            tparam_dic['no_comm_on_server'] = True
+        if set(tparam_contents['moms']) & set(tparam_contents['comms']):
+            tparam_dic['no_comm_on_mom'] = False
+        if set(tparam_contents['mom']) & set(tparam_contents['comms']):
+            tparam_dic['no_comm_on_mom'] = False
         return tparam_dic
 
-    def __are_requirements_matching(self, requirements={}, param_count={}, test=None):
+    def __get_requirements_value(self, method, cls):
+        """
+        get requirements at test case and suite level
+        """
+        Missing = {}
+        default_requirements = {
+            'num_servers': 1,
+            'num_moms': 1,
+            'num_comms': 1,
+            'num_clients': 1,
+            'no_mom_on_server': False,
+            'no_comm_on_server': False,
+            'no_comm_on_mom': True
+        }
+        eff_requirements = {}
+        tc_requirements = getattr(method, REQUIREMENTS_KEY, Missing)
+        if cls is not None:
+            ts_requirements = getattr(cls, REQUIREMENTS_KEY, Missing)
+        if (tc_requirements is None and ts_requirements is None):
+            eff_requirements = default_requirements
+        else:
+            eff_requirements = ts_requirements
+            for key in default_requirements:
+                if key in tc_requirements:
+                    eff_requirements[key] = tc_requirements[key]
+            for key in default_requirements:
+                if key not in eff_requirements:
+                    eff_requirements[key] = default_requirements[key]
+        return eff_requirements
+
+    def __are_requirements_matching(self, param_count={}, test=None):
         """
         Validates test requirements against test cluster information
         returns True on match or False otherwise
@@ -656,15 +672,13 @@ class PTLTestRunner(Plugin):
         keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
         #print "param_count.............."
         #print param_count
-        #print "requirements.............."
-        #print requirements
         if test is not None:
             method = getattr(test.test, getattr(test.test, '_testMethodName'))
             cls = method.im_class
-            tc_req = get_requirements_value(method, cls, REQUIREMENTS_KEY)
+            tc_req = self.__get_requirements_value(method, cls)
             #print "tc_req ............................"
             #print tc_req
-        if (param_count and requirements):
+        if (param_count and tc_req):
             for kl in keylist:
                 if param_count[kl] < tc_req[kl]:
                     return False
@@ -674,7 +688,6 @@ class PTLTestRunner(Plugin):
         Start the test
         """
         test.start_time = datetime.datetime.now()
-        requirements = {}
         if ((self.cumulative_tc_failure_threshold != 0) and
                 (self.__tf_count >= self.cumulative_tc_failure_threshold)):
             _msg = 'Total testcases failure count exceeded cumulative'
@@ -696,15 +709,10 @@ class PTLTestRunner(Plugin):
         pcounts = {}
         if self.param is not None:
             pcounts = self.__get_param_count()
-        requirements = self.__get_requirements(test)
-        if requirements:
-            if not pcounts:
-                self.result.startTest(test)
-                raise SkipTest('SKIPPED TEST since test has requirements')
-            rv = self.__are_requirements_matching(requirements, pcounts, test)
-            if rv is False:
-                self.result.startTest(test)
-                raise SkipTest('SKIPPED TEST since requirements not matching')
+        rv = self.__are_requirements_matching(pcounts, test)
+        if rv is False:
+            self.result.startTest(test)
+            raise SkipTest('SKIPPED TEST since requirements not matching')
 
         def timeout_handler(signum, frame):
             raise TimeOut('Timed out after %s second' % timeout)

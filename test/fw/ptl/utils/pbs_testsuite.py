@@ -209,18 +209,17 @@ def skipOnCray(function):
     return wrapper
 
 
-def skipOnCpuSet(*args, **kwargs):
+def skipOnCpuSet(function):
     """
     Decorator to skip a test on a CpuSet system
     """
-    def wrapper(obj):
+    def wrapper(*args, **kwargs):
         if self.mom.is_cpuset_mom():
             self.skipTest(reason='capability not supported on Cpuset')
-        #else:
-        #    #function(self, *args, **kwargs)
-        return obj
-        #wrapper.__doc__ = function.__doc__
-        #wrapper.__name__ = function.__name__
+        else:
+            function(self, *args, **kwargs)
+    wrapper.__doc__ = function.__doc__
+    wrapper.__name__ = function.__name__
     return wrapper
 
 
