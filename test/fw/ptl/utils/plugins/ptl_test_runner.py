@@ -604,6 +604,8 @@ class PTLTestRunner(Plugin):
         paramkeys = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
         tparam_dic = {}
         tparam_contents = {}
+        for key1 in paramkeys:
+            tparam_contents[key1] = []
         tparam_dic.update(param_count)
         for h in self.param.split(','):
             if '=' in h:
@@ -618,11 +620,13 @@ class PTLTestRunner(Plugin):
                         tparam_dic['num_comms'] = len(v.split(':'))
                     if k == 'clients':
                         tparam_dic['num_clients'] = len(v.split(':'))
-        print "Param data %%%%%%%%%%%%%%"
-        print tparam_contents
         if set(tparam_contents['servers']) & set(tparam_contents['moms']):
             tparam_dic['no_mom_on_server'] = True
         if set(tparam_contents['server']) & set(tparam_contents['moms']):
+            tparam_dic['no_mom_on_server'] = True
+        if set(tparam_contents['servers']) & set(tparam_contents['mom']):
+            tparam_dic['no_mom_on_server'] = True
+        if set(tparam_contents['server']) & set(tparam_contents['mom']):
             tparam_dic['no_mom_on_server'] = True
         if set(tparam_contents['servers']) & set(tparam_contents['comms']):
             tparam_dic['no_comm_on_server'] = True
@@ -670,6 +674,7 @@ class PTLTestRunner(Plugin):
         returns True on match or False otherwise
         """
         keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
+        keylist2 = ['no_mom_on_server', 'no_comm_on_server', 'no_comm_on_mom']
         #print "param_count.............."
         #print param_count
         if test is not None:
@@ -682,12 +687,15 @@ class PTLTestRunner(Plugin):
             for kl in keylist:
                 if param_count[kl] < tc_req[kl]:
                     return False
+            for km in keylist2:
+                if param_count[km] != tc_req[km]:
+                    return False
 
     def startTest(self, test):
         """
         Start the test
         """
-        test.start_time = datetime.datetime.now()
+        #test.start_time = datetime.datetime.now()
         if ((self.cumulative_tc_failure_threshold != 0) and
                 (self.__tf_count >= self.cumulative_tc_failure_threshold)):
             _msg = 'Total testcases failure count exceeded cumulative'
