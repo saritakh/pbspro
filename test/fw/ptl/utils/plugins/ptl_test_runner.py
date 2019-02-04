@@ -611,7 +611,7 @@ class PTLTestRunner(Plugin):
             if '=' in h:
                 k, v = h.split('=')
                 if k in paramkeys:
-                    tparam_contents[k] = [v.replace(':',',')]
+                    tparam_contents[k] = [v.replace(':', ',')]
                     if (k == 'server' or k == 'servers'):
                         tparam_dic['num_servers'] = len(v.split(':'))
                     if (k == 'mom' or k == 'moms'):
@@ -720,7 +720,7 @@ class PTLTestRunner(Plugin):
         rv = self.__are_requirements_matching(pcounts, test)
         if rv is False:
             self.result.startTest(test)
-            raise SkipTest('SKIPPED TEST since requirements not matching')
+            raise SkipTest('SKIPPED TEST since requirements are not matching')
 
         def timeout_handler(signum, frame):
             raise TimeOut('Timed out after %s second' % timeout)

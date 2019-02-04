@@ -188,16 +188,45 @@ class PTLTestInfo(Plugin):
                 for l in lines:
                     w.write(l + '\n')
 
+    def __get_requirements_value(self, suite):
+        """
+        get requirements at test case and suite level
+        """
+        Missing = {}
+        default_requirements = {
+            'num_servers': 1,
+            'num_moms': 1,
+            'num_comms': 1,
+            'num_clients': 1,
+            'no_mom_on_server': False,
+            'no_comm_on_server': False,
+            'no_comm_on_mom': True
+        }
+        eff_requirements = {}
+        ts_requirements = getattr(suite, REQUIREMENTS_KEY, Missing)
+        list_tc_requirements = {}
+        tc_eff_requirements = {}
+        dcl = suite.__dict__
+        for k in dcl.keys():
+            list_tc_requirements[k] = getattr(k, REQUIREMENTS_KEY, {})
+            if (list_tc_requirements[k] is None and ts_requirements is None):
+                tc_eff_requirements = default_requirements
+            else:
+                tc_eff_requirements = ts_requirements
+                for key in default_requirements:
+                    if key in list_tc_requirements[k]:
+                        tc_eff_requirements[key] = list_tc_requirements[k][key] #Need to work on value here
+                for key in default_requirements:
+                    if key not in tc_eff_requirements:
+                        tc_eff_requirements[key] = default_requirements[key]
+        return tc_eff_requirements
+
+
     def _gen_ts_tree(self, suite):
         n = suite.__name__
         tsd = {}
         tsd['doc'] = str(suite.__doc__)
         tstags = getattr(suite, TAGKEY, [])
-        tsreqts = getattr(suite, REQUIREMENTS_KEY, {})
-        if tsreqts:
-            tsd['requirements'] = tsreqts
-            print "TS REQUIREMENTS 0000000000000000000000"
-            print tsreqts
         numnodes = 1
         for tag in tstags:
             if 'numnodes' in tag:
@@ -209,6 +238,7 @@ class PTLTestInfo(Plugin):
         tsd['module'] = suite.__module__
         dcl = suite.__dict__
         tcs = {}
+        tcreqts = self.__get_requirements_value(suite)
         for k in dcl.keys():
             if k.startswith('test_'):
                 tcd = {}
@@ -220,11 +250,10 @@ class PTLTestInfo(Plugin):
                     continue
                 tcd['doc'] = str(tc.__doc__)
                 tctags = sorted(set(tstags + getattr(tc, TAGKEY, [])))
-                tcreqts = getattr(tc, REQUIREMENTS_KEY, {})
                 if tcreqts:
                     tcd['requirements'] = tcreqts
-                    print "TC REQUIREMENTS 111111111111111111"
-                    print tcreqts
+                    #print "EFFECTIVE TC REQUIREMENTS 111111111111111111"
+                    #print tcreqts
                 numnodes = 1
                 for tag in tctags:
                     if 'numnodes' in tag:
