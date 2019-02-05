@@ -646,22 +646,18 @@ class PTLTestRunner(Plugin):
         """
         keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
         keylist2 = ['no_mom_on_server', 'no_comm_on_server', 'no_comm_on_mom']
-        #print "param_count.............."
-        #print param_count
         if test is not None:
             method = getattr(test.test, getattr(test.test, '_testMethodName'))
             cls = method.im_class
             ts_requirements = getattr(cls, REQUIREMENTS_KEY, {})
             tc_requirements = getattr(method, REQUIREMENTS_KEY, {})
-            tc_req = get_eff_requirements(ts_requirements, tc_requirements)
-            #print "tc_req ............................"
-            #print tc_req
-        if (param_count and tc_req):
+            eff_tc_req = get_eff_requirements(ts_requirements, tc_requirements)
+        if (param_count and eff_tc_req):
             for kl in keylist:
-                if param_count[kl] < tc_req[kl]:
+                if param_count[kl] < eff_tc_req[kl]:
                     return False
             for km in keylist2:
-                if param_count[km] != tc_req[km]:
+                if param_count[km] != eff_tc_req[km]:
                     return False
 
     def startTest(self, test):

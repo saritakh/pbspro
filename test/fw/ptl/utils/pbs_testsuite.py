@@ -198,7 +198,6 @@ def skipOnCray(function):
     """
     Decorator to skip a test on a ``Cray`` system
     """
-
     def wrapper(self, *args, **kwargs):
         if self.mom.is_cray():
             self.skipTest(reason='capability not supported on Cray')

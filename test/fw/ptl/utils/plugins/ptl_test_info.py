@@ -46,11 +46,10 @@ from copy import deepcopy
 log = logging.getLogger('nose.plugins.PTLTestInfo')
 
 
-def get_eff_requirements(ts_req={}, tc_req={}):
+def get_eff_requirements(ts_requirements={}, tc_requirements={}):
     """
-    get effective requirements at test case level
+    get effective requirements at test case
     """
-    Missing = {}
     default_requirements = {
         'num_servers': 1,
         'num_moms': 1,
@@ -61,17 +60,18 @@ def get_eff_requirements(ts_req={}, tc_req={}):
         'no_comm_on_mom': True
     }
     tc_eff_requirements = {}
-    if (tc_req is None and ts_req is None):
+    if (tc_requirements is None and ts_requirements is None):
         tc_eff_requirements = default_requirements
     else:
-        tc_eff_requirements = ts_req
+        tc_eff_requirements = ts_requirements
         for key in default_requirements:
-            if key in tc_req:
-                tc_eff_requirements[key] = tc_req[key]
+            if key in tc_requirements:
+                tc_eff_requirements[key] = tc_requirements[key]
         for key in default_requirements:
             if key not in tc_eff_requirements:
                 tc_eff_requirements[key] = default_requirements[key]
     return tc_eff_requirements
+
 
 class FakeRunner(object):
 
@@ -214,7 +214,6 @@ class PTLTestInfo(Plugin):
                 w.write('\n    Test suite hierarchy:\n')
                 for l in lines:
                     w.write(l + '\n')
-
 
     def _gen_ts_tree(self, suite):
         n = suite.__name__
