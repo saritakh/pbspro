@@ -46,6 +46,33 @@ from copy import deepcopy
 log = logging.getLogger('nose.plugins.PTLTestInfo')
 
 
+def get_eff_requirements(ts_req={}, tc_req={}):
+    """
+    get effective requirements at test case level
+    """
+    Missing = {}
+    default_requirements = {
+        'num_servers': 1,
+        'num_moms': 1,
+        'num_comms': 1,
+        'num_clients': 1,
+        'no_mom_on_server': False,
+        'no_comm_on_server': False,
+        'no_comm_on_mom': True
+    }
+    tc_eff_requirements = {}
+    if (tc_req is None and ts_req is None):
+        tc_eff_requirements = default_requirements
+    else:
+        tc_eff_requirements = ts_req
+        for key in default_requirements:
+            if key in tc_req:
+                tc_eff_requirements[key] = tc_req[key]
+        for key in default_requirements:
+            if key not in tc_eff_requirements:
+                tc_eff_requirements[key] = default_requirements[key]
+    return tc_eff_requirements
+
 class FakeRunner(object):
 
     def __init__(self, config):
@@ -188,39 +215,6 @@ class PTLTestInfo(Plugin):
                 for l in lines:
                     w.write(l + '\n')
 
-    def __get_requirements_value(self, suite):
-        """
-        get requirements at test case and suite level
-        """
-        Missing = {}
-        default_requirements = {
-            'num_servers': 1,
-            'num_moms': 1,
-            'num_comms': 1,
-            'num_clients': 1,
-            'no_mom_on_server': False,
-            'no_comm_on_server': False,
-            'no_comm_on_mom': True
-        }
-        eff_requirements = {}
-        ts_requirements = getattr(suite, REQUIREMENTS_KEY, Missing)
-        list_tc_requirements = {}
-        tc_eff_requirements = {}
-        dcl = suite.__dict__
-        for k in dcl.keys():
-            list_tc_requirements[k] = getattr(k, REQUIREMENTS_KEY, {})
-            if (list_tc_requirements[k] is None and ts_requirements is None):
-                tc_eff_requirements = default_requirements
-            else:
-                tc_eff_requirements = ts_requirements
-                for key in default_requirements:
-                    if key in list_tc_requirements[k]:
-                        tc_eff_requirements[key] = list_tc_requirements[k][key] #Need to work on value here
-                for key in default_requirements:
-                    if key not in tc_eff_requirements:
-                        tc_eff_requirements[key] = default_requirements[key]
-        return tc_eff_requirements
-
 
     def _gen_ts_tree(self, suite):
         n = suite.__name__
@@ -238,7 +232,7 @@ class PTLTestInfo(Plugin):
         tsd['module'] = suite.__module__
         dcl = suite.__dict__
         tcs = {}
-        tcreqts = self.__get_requirements_value(suite)
+        ts_req = getattr(suite, REQUIREMENTS_KEY, {})
         for k in dcl.keys():
             if k.startswith('test_'):
                 tcd = {}
@@ -249,12 +243,12 @@ class PTLTestInfo(Plugin):
                     # not a test case, ignore
                     continue
                 tcd['doc'] = str(tc.__doc__)
-                tctags = sorted(set(tstags + getattr(tc, TAGKEY, [])))
-                if tcreqts:
-                    tcd['requirements'] = tcreqts
-                    #print "EFFECTIVE TC REQUIREMENTS 111111111111111111"
-                    #print tcreqts
+                tc_req = getattr(tc, REQUIREMENTS_KEY, {})
+                eff_tc_req = get_eff_requirements(ts_req, tc_req)
+                if eff_tc_req:
+                    tcd['requirements'] = eff_tc_req
                 numnodes = 1
+                tctags = sorted(set(tstags + getattr(tc, TAGKEY, [])))
                 for tag in tctags:
                     if 'numnodes' in tag:
                         numnodes = tag.split('=')[1].strip()

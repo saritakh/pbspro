@@ -58,6 +58,7 @@ from ptl.utils.pbs_testsuite import PBSTestSuite
 from ptl.utils.pbs_testsuite import TIMEOUT_KEY
 from ptl.utils.pbs_testsuite import REQUIREMENTS_KEY
 from ptl.utils.pbs_dshutils import DshUtils
+from ptl.utils.plugins.ptl_test_info import get_eff_requirements
 from ptl.lib.pbs_testlib import PBSInitServices
 from ptl.utils.pbs_covutils import LcovUtils
 try:
@@ -638,36 +639,6 @@ class PTLTestRunner(Plugin):
             tparam_dic['no_comm_on_mom'] = False
         return tparam_dic
 
-    def __get_requirements_value(self, method, cls):
-        """
-        get requirements at test case and suite level
-        """
-        Missing = {}
-        default_requirements = {
-            'num_servers': 1,
-            'num_moms': 1,
-            'num_comms': 1,
-            'num_clients': 1,
-            'no_mom_on_server': False,
-            'no_comm_on_server': False,
-            'no_comm_on_mom': True
-        }
-        eff_requirements = {}
-        tc_requirements = getattr(method, REQUIREMENTS_KEY, Missing)
-        if cls is not None:
-            ts_requirements = getattr(cls, REQUIREMENTS_KEY, Missing)
-        if (tc_requirements is None and ts_requirements is None):
-            eff_requirements = default_requirements
-        else:
-            eff_requirements = ts_requirements
-            for key in default_requirements:
-                if key in tc_requirements:
-                    eff_requirements[key] = tc_requirements[key]
-            for key in default_requirements:
-                if key not in eff_requirements:
-                    eff_requirements[key] = default_requirements[key]
-        return eff_requirements
-
     def __are_requirements_matching(self, param_count={}, test=None):
         """
         Validates test requirements against test cluster information
@@ -680,7 +651,9 @@ class PTLTestRunner(Plugin):
         if test is not None:
             method = getattr(test.test, getattr(test.test, '_testMethodName'))
             cls = method.im_class
-            tc_req = self.__get_requirements_value(method, cls)
+            ts_requirements = getattr(cls, REQUIREMENTS_KEY, {})
+            tc_requirements = getattr(method, REQUIREMENTS_KEY, {})
+            tc_req = get_eff_requirements(ts_requirements, tc_requirements)
             #print "tc_req ............................"
             #print tc_req
         if (param_count and tc_req):
@@ -695,7 +668,6 @@ class PTLTestRunner(Plugin):
         """
         Start the test
         """
-        #test.start_time = datetime.datetime.now()
         if ((self.cumulative_tc_failure_threshold != 0) and
                 (self.__tf_count >= self.cumulative_tc_failure_threshold)):
             _msg = 'Total testcases failure count exceeded cumulative'
