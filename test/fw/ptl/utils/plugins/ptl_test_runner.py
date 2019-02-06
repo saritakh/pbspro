@@ -57,6 +57,7 @@ from nose.suite import ContextSuite
 from ptl.utils.pbs_testsuite import PBSTestSuite
 from ptl.utils.pbs_testsuite import TIMEOUT_KEY
 from ptl.utils.pbs_testsuite import REQUIREMENTS_KEY
+from ptl.utils.pbs_testsuite import common_default_requirements
 from ptl.utils.pbs_dshutils import DshUtils
 from ptl.utils.plugins.ptl_test_info import get_eff_requirements
 from ptl.lib.pbs_testlib import PBSInitServices
@@ -593,21 +594,12 @@ class PTLTestRunner(Plugin):
         """
         Method to convert data in param into dictionary of counts
         """
-        param_count = {
-            'num_servers': 0,
-            'num_moms': 1,
-            'num_comms': 1,
-            'num_clients': 1,
-            'no_mom_on_server': False,
-            'no_comm_on_server': False,
-            'no_comm_on_mom': True
-        }
         paramkeys = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
         tparam_dic = {}
         tparam_contents = {}
         for key1 in paramkeys:
             tparam_contents[key1] = []
-        tparam_dic.update(param_count)
+        tparam_dic.update(common_default_requirements)
         for h in self.param.split(','):
             if '=' in h:
                 k, v = h.split('=')

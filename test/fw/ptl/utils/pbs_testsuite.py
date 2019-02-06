@@ -136,6 +136,16 @@ TIMEOUT_KEY = '__testcase_timeout__'
 MINIMUM_TESTCASE_TIMEOUT = 600
 REQUIREMENTS_KEY = '__PTL_REQS_LIST__'
 
+common_default_requirements = {
+    'num_servers': 1,
+    'num_moms': 1,
+    'num_comms': 1,
+    'num_clients': 1,
+    'no_mom_on_server': False,
+    'no_comm_on_server': False,
+    'no_comm_on_mom': True
+}
+
 
 def skip(reason="Skipped test execution"):
     """
@@ -225,7 +235,7 @@ def skipOnCpuSet(function):
 def requirements(*args, **kwargs):
     """
     Decorator to provide the cluster information required for a particular
-    testcase or testsuite.
+    testcase.
     """
     def wrap_obj(obj):
         getreq = getattr(obj, REQUIREMENTS_KEY, {})
