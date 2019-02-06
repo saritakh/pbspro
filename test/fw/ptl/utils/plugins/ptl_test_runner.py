@@ -621,21 +621,25 @@ class PTLTestRunner(Plugin):
                         tparam_dic['num_comms'] = len(v.split(':'))
                     if k == 'clients':
                         tparam_dic['num_clients'] = len(v.split(':'))
-        if set(tparam_contents['servers']) & set(tparam_contents['moms']):
+        if (
+            (set(tparam_contents['servers']) & set(tparam_contents['moms'])) or
+            (set(tparam_contents['server']) & set(tparam_contents['moms'])) or
+            (set(tparam_contents['servers']) & set(tparam_contents['mom'])) or
+            (set(tparam_contents['server']) & set(tparam_contents['mom']))
+        ):
             tparam_dic['no_mom_on_server'] = True
-        if set(tparam_contents['server']) & set(tparam_contents['moms']):
-            tparam_dic['no_mom_on_server'] = True
-        if set(tparam_contents['servers']) & set(tparam_contents['mom']):
-            tparam_dic['no_mom_on_server'] = True
-        if set(tparam_contents['server']) & set(tparam_contents['mom']):
-            tparam_dic['no_mom_on_server'] = True
-        if set(tparam_contents['servers']) & set(tparam_contents['comms']):
+        if (
+            (set(tparam_contents['servers']) &
+             set(tparam_contents['comms'])) or
+            (set(tparam_contents['server']) & set(tparam_contents['comms'])) or
+            (set(tparam_contents['moms']) & set(tparam_contents['comms'])) or
+            (set(tparam_contents['mom']) & set(tparam_contents['comms']))
+        ):
             tparam_dic['no_comm_on_server'] = True
-        if set(tparam_contents['server']) & set(tparam_contents['comms']):
-            tparam_dic['no_comm_on_server'] = True
-        if set(tparam_contents['moms']) & set(tparam_contents['comms']):
-            tparam_dic['no_comm_on_mom'] = False
-        if set(tparam_contents['mom']) & set(tparam_contents['comms']):
+        if (
+            (set(tparam_contents['moms']) & set(tparam_contents['comms'])) or
+            (set(tparam_contents['mom']) & set(tparam_contents['comms']))
+        ):
             tparam_dic['no_comm_on_mom'] = False
         return tparam_dic
 
