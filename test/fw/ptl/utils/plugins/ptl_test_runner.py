@@ -480,15 +480,6 @@ class PTLTestRunner(Plugin):
         self.__tf_count = 0
         self.__failed_tc_count_msg = False
         self._test_marker = 'test_'
-        self.tst_req = {
-            'num_servers': 1,
-            'num_moms': 1,
-            'num_comms': 1,
-            'num_clients': 1,
-            'no_mom_on_server': False,
-            'no_comm_on_server': False,
-            'no_comm_on_mom': True
-        }
 
     def options(self, parser, env):
         """
@@ -590,7 +581,7 @@ class PTLTestRunner(Plugin):
         test.duration = test.end_time - test.start_time
         test.captured_logs = self.result.handler.get_logs()
 
-    def __get_param_count(self):
+    def __get_param_dictionary(self):
         """
         Method to convert data in param into dictionary of counts
         """
@@ -678,10 +669,10 @@ class PTLTestRunner(Plugin):
             self.__failed_tc_count_msg = True
             raise TCThresholdReached
         timeout = self.__get_timeout(test)
-        pcounts = {}
+        param_dict = {}
         if self.param is not None:
-            pcounts = self.__get_param_count()
-        rv = self.__are_requirements_matching(pcounts, test)
+            param_dict = self.__get_param_dictionary()
+        rv = self.__are_requirements_matching(param_dict, test)
         if rv is False:
             self.result.startTest(test)
             raise SkipTest('SKIPPED TEST since requirements are not matching')

@@ -53,9 +53,9 @@ def get_eff_requirements(ts_requirements={}, tc_requirements={}):
     """
     tc_eff_requirements = {}
     if (tc_requirements is None and ts_requirements is None):
-        tc_eff_requirements = common_default_requirements
+        tc_eff_requirements = deepcopy(common_default_requirements)
     else:
-        tc_eff_requirements = ts_requirements
+        tc_eff_requirements = deepcopy(ts_requirements)
         for key in common_default_requirements:
             if key in tc_requirements:
                 tc_eff_requirements[key] = tc_requirements[key]

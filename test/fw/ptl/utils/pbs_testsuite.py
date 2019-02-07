@@ -208,6 +208,7 @@ def skipOnCray(function):
     """
     Decorator to skip a test on a ``Cray`` system
     """
+
     def wrapper(self, *args, **kwargs):
         if self.mom.is_cray():
             self.skipTest(reason='capability not supported on Cray')
@@ -222,6 +223,7 @@ def skipOnCpuSet(function):
     """
     Decorator to skip a test on a CpuSet system
     """
+
     def wrapper(self, *args, **kwargs):
         if self.mom.is_cpuset_mom():
             self.skipTest(reason='capability not supported on Cpuset')
