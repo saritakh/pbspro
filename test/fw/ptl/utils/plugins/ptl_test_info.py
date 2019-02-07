@@ -41,7 +41,7 @@ from nose.plugins.base import Plugin
 from ptl.utils.pbs_testsuite import PBSTestSuite
 from ptl.utils.plugins.ptl_test_tags import TAGKEY
 from ptl.utils.pbs_testsuite import REQUIREMENTS_KEY
-from ptl.utils.pbs_testsuite import common_default_requirements
+from ptl.utils.pbs_testsuite import default_requirements
 from copy import deepcopy
 
 log = logging.getLogger('nose.plugins.PTLTestInfo')
@@ -53,15 +53,15 @@ def get_eff_requirements(ts_requirements={}, tc_requirements={}):
     """
     tc_eff_requirements = {}
     if (tc_requirements is None and ts_requirements is None):
-        tc_eff_requirements = deepcopy(common_default_requirements)
+        tc_eff_requirements = deepcopy(default_requirements)
     else:
         tc_eff_requirements = deepcopy(ts_requirements)
-        for key in common_default_requirements:
+        for key in default_requirements:
             if key in tc_requirements:
                 tc_eff_requirements[key] = tc_requirements[key]
-        for key in common_default_requirements:
+        for key in default_requirements:
             if key not in tc_eff_requirements:
-                tc_eff_requirements[key] = common_default_requirements[key]
+                tc_eff_requirements[key] = default_requirements[key]
     return tc_eff_requirements
 
 

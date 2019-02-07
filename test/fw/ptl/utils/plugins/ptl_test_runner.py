@@ -57,7 +57,7 @@ from nose.suite import ContextSuite
 from ptl.utils.pbs_testsuite import PBSTestSuite
 from ptl.utils.pbs_testsuite import TIMEOUT_KEY
 from ptl.utils.pbs_testsuite import REQUIREMENTS_KEY
-from ptl.utils.pbs_testsuite import common_default_requirements
+from ptl.utils.pbs_testsuite import default_requirements
 from ptl.utils.pbs_dshutils import DshUtils
 from ptl.utils.plugins.ptl_test_info import get_eff_requirements
 from ptl.lib.pbs_testlib import PBSInitServices
@@ -588,9 +588,11 @@ class PTLTestRunner(Plugin):
         paramkeys = ['server', 'servers', 'mom', 'moms', 'comms', 'client']
         tparam_dic = {}
         tparam_contents = {}
-        for key1 in paramkeys:
-            tparam_contents[key1] = []
-        tparam_dic.update(common_default_requirements)
+        for key in paramkeys:
+            tparam_contents[key] = []
+        tparam_dic.update(default_requirements)
+        if self.param is None:
+            return tparam_dic
         for h in self.param.split(','):
             if '=' in h:
                 k, v = h.split('=')
@@ -632,7 +634,7 @@ class PTLTestRunner(Plugin):
         returns True on match or False otherwise
         """
         keylist = ['num_servers', 'num_moms', 'num_comms', 'num_clients']
-        keylist2 = ['no_mom_on_server', 'no_comm_on_server', 'no_comm_on_mom']
+        flaglist = ['no_mom_on_server', 'no_comm_on_server', 'no_comm_on_mom']
         if test is not None:
             method = getattr(test.test, getattr(test.test, '_testMethodName'))
             cls = method.im_class
@@ -643,7 +645,7 @@ class PTLTestRunner(Plugin):
             for kl in keylist:
                 if param_count[kl] < eff_tc_req[kl]:
                     return False
-            for km in keylist2:
+            for km in flaglist:
                 if param_count[km] != eff_tc_req[km]:
                     return False
 
@@ -669,9 +671,7 @@ class PTLTestRunner(Plugin):
             self.__failed_tc_count_msg = True
             raise TCThresholdReached
         timeout = self.__get_timeout(test)
-        param_dict = {}
-        if self.param is not None:
-            param_dict = self.__get_param_dictionary()
+        param_dict = self.__get_param_dictionary()
         rv = self.__are_requirements_matching(param_dict, test)
         if rv is False:
             self.result.startTest(test)

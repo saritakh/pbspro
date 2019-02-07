@@ -136,7 +136,7 @@ TIMEOUT_KEY = '__testcase_timeout__'
 MINIMUM_TESTCASE_TIMEOUT = 600
 REQUIREMENTS_KEY = '__PTL_REQS_LIST__'
 
-common_default_requirements = {
+default_requirements = {
     'num_servers': 1,
     'num_moms': 1,
     'num_comms': 1,
