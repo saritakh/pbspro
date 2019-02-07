@@ -675,7 +675,7 @@ class PTLTestRunner(Plugin):
         rv = self.__are_requirements_matching(param_dict, test)
         if rv is False:
             self.result.startTest(test)
-            raise SkipTest('SKIPPED TEST since requirements are not matching')
+            raise SkipTest('Test requirements are not matching')
 
         def timeout_handler(signum, frame):
             raise TimeOut('Timed out after %s second' % timeout)
