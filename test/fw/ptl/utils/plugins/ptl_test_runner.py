@@ -606,14 +606,18 @@ class PTLTestRunner(Plugin):
                         tparam_dic['num_comms'] = len(v.split(':'))
                     if k == 'clients':
                         tparam_dic['num_clients'] = len(v.split(':'))
-        if (
+        for pkey in paramkeys:
+            if pkey in ['server', 'mom', 'comms', 'client']:
+                if not tparam_contents[pkey]:
+                    tparam_contents[pkey] = [platform.node().split('.', 1)[0]]
+        if not (
             (set(tparam_contents['servers']) & set(tparam_contents['moms'])) or
             (set(tparam_contents['server']) & set(tparam_contents['moms'])) or
             (set(tparam_contents['servers']) & set(tparam_contents['mom'])) or
             (set(tparam_contents['server']) & set(tparam_contents['mom']))
         ):
             tparam_dic['no_mom_on_server'] = True
-        if (
+        if not (
             (set(tparam_contents['servers']) &
              set(tparam_contents['comms'])) or
             (set(tparam_contents['server']) & set(tparam_contents['comms'])) or
