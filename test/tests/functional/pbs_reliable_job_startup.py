@@ -546,6 +546,7 @@ do
     echo "HOST=$h"
     echo "pbs_tmrsh $h hostname"
     pbs_tmrsh $h hostname -s
+    sleep 2
 done
 """ % (self.job1_oselect, self.job1_place, FIB37, FIB37, FIB37)
 
